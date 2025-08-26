@@ -1,11 +1,11 @@
 {
-  "contractAddress": "0xCfEB869F69431e42cdB54A4F4f105C19C080A601",
-  "testCompletedAt": "2025-08-14T12:44:44.593Z",
+  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "testCompletedAt": "2025-08-15T04:36:35.268Z",
   "candidateCount": "3",
   "voterCount": "4",
   "totalVotes": "4",
   "winner": {
-    "address": "0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0",
+    "address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
     "name": "Candidate 1",
     "votes": "2"
   },

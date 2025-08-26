@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const { ethers } = require('ethers');
+const dotenv = require('dotenv');
+dotenv.config();
 
 async function testSimplifiedVotingSystem() {
     try {
@@ -12,7 +14,7 @@ async function testSimplifiedVotingSystem() {
         const { abi, bytecode } = contractData;
         
         // Connect to Ganache
-        const provider = new ethers.JsonRpcProvider('http://127.0.0.1:7545');
+        const provider = new ethers.JsonRpcProvider(process.env.BLOCKCHAIN_RPC_URL || 'http://127.0.0.1:8545');
         console.log('🌐 Connected to blockchain');
         
         // Get accounts

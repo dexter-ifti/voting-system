@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "jest"
+    "test": "jest",
+    "test-voter-login": "node scripts/test-voter-login.js",
+    "test-candidate-login": "node scripts/test-candidate-login.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
