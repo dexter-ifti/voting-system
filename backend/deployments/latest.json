@@ -1,8 +1,8 @@
 {
-  "contractAddress": "0x5b1869D9A4C187F2EAa108f3062412ecf0526b24",
-  "transactionHash": "0x5cbc413002f4f824eb1fc48bd801b266f5dbb63b873cc962b67bae879bae1e3c",
-  "deployedAt": "2025-08-14T12:43:31.951Z",
-  "network": "ganache-local",
-  "deployer": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
-  "contractName": "SimplifiedVotingSystem"
+  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "transactionHash": "0x51dfb856b5897c496fb74ac199cd4e51aa36a7bb411f4d58ce81de2601186b90",
+  "deployedAt": "2025-08-15T03:22:34.969Z",
+  "network": "anvil-local",
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "contractName": "VotingSystem"
 }

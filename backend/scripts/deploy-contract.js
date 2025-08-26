@@ -9,9 +9,9 @@ async function deployContract() {
         console.log('🚀 Starting contract deployment...');
 
         // Read compiled contract
-        const contractPath = path.join(__dirname, '../contracts/compiled/SimplifiedVotingSystem.json');
+        const contractPath = path.join(__dirname, '../contracts/compiled/VotingSystem.json');
         if (!fs.existsSync(contractPath)) {
-            console.log('❌ Compiled SimplifiedVotingSystem.json not found. Run: node scripts/compile-simplified-voting.js');
+            console.log('❌ Compiled VotingSystem.json not found. Run: node scripts/compile-contracts.js');
             return;
         }        const contractArtifacts = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
         const { abi, bytecode } = contractArtifacts;
@@ -21,8 +21,8 @@ async function deployContract() {
 
 
         // Setup provider and wallet
-        console.log('🌐 Connecting to blockchain at: http://127.0.0.1:7545');
-        const provider = new ethers.JsonRpcProvider('http://127.0.0.1:7545');
+        console.log('🌐 Connecting to blockchain at: http://127.0.0.1:8545');
+        const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
         
         // Get accounts from Ganache
         const accounts = await provider.listAccounts();
@@ -48,9 +48,11 @@ async function deployContract() {
         // Deploy contract
         const contractFactory = new ethers.ContractFactory(abi, bytecode, wallet);
         
-        console.log('⏳ Deploying SimplifiedVotingSystem contract...');
-        const contract = await contractFactory.deploy({
-            gasLimit: 6000000,  // Reduced gas limit for simplified contract
+        console.log('⏳ Deploying VotingSystem contract...');
+        const contract = await contractFactory.deploy(
+            'This is a simplified voting system',
+            'In this system, voters can create and vote on proposals.',
+            {gasLimit: 6000000,  // Reduced gas limit for simplified contract
             gasPrice: ethers.parseUnits('20', 'gwei')
         });
 
@@ -70,9 +72,9 @@ async function deployContract() {
             contractAddress,
             transactionHash: deploymentTx.hash,
             deployedAt: new Date().toISOString(),
-            network: 'ganache-local',
+            network: 'anvil-local',
             deployer: wallet.address,
-            contractName: 'SimplifiedVotingSystem'
+            contractName: 'VotingSystem'
         };
 
         // Create deployments directory
