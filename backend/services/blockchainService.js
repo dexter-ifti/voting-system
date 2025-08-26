@@ -1,6 +1,8 @@
 // services/blockchainService.js
 const { ethers } = require('ethers');
-const Web3 = require('web3');
+const {Web3} = require('web3');
+const dotenv = require('dotenv');
+dotenv.config();
 
 // Contract ABI - This should match your compiled contract
 const CONTRACT_ABI = [
@@ -221,7 +223,7 @@ class BlockchainService {
     async initialize() {
         try {
             // Connect to Ganache or other Ethereum node
-            const rpcUrl = process.env.BLOCKCHAIN_RPC_URL || 'http://127.0.0.1:7545';
+            const rpcUrl = process.env.BLOCKCHAIN_RPC_URL || 'http://127.0.0.1:8545';
 
             // Initialize ethers provider
             this.provider = new ethers.JsonRpcProvider(rpcUrl);
@@ -243,12 +245,34 @@ class BlockchainService {
     // Deploy new election contract
     async deployElectionContract(title, description, adminPrivateKey) {
         try {
-            const wallet = new ethers.Wallet(adminPrivateKey, this.provider);
+            const wallet = new ethers.Wallet(adminPrivateKey || process.env.ADMIN_PRIVATE_KEY, this.provider);
 
-            // Contract bytecode (you'll need to compile your Solidity contract)
-            const contractBytecode = process.env.CONTRACT_BYTECODE;
+            // Contract bytecode - try env first, then compiled artifact fallback
+            let contractBytecode = process.env.CONTRACT_BYTECODE;
             if (!contractBytecode) {
-                throw new Error('Contract bytecode not found in environment variables');
+                try {
+                    const fs = require('fs');
+                    const path = require('path');
+                    const artifactPath = path.join(__dirname, '../contracts/compiled/VotingSystem.json');
+                    if (fs.existsSync(artifactPath)) {
+                        const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
+                        if (artifact.bytecode) {
+                            contractBytecode = artifact.bytecode.startsWith('0x') ? artifact.bytecode : `0x${artifact.bytecode}`;
+                            console.log('ℹ️ Loaded contract bytecode from compiled artifact');
+                        }
+                    }
+                } catch (innerErr) {
+                    console.error('⚠️ Fallback artifact load failed:', innerErr.message);
+                }
+            }
+
+            if (!contractBytecode) {
+                throw new Error('Contract bytecode not found (missing CONTRACT_BYTECODE env and compiled artifact fallback)');
+            }
+
+            // Ensure 0x prefix
+            if (!contractBytecode.startsWith('0x')) {
+                contractBytecode = '0x' + contractBytecode;
             }
 
             const contractFactory = new ethers.ContractFactory(

@@ -4,6 +4,12 @@ const { ethers } = require('ethers');
 class BlockchainConfig {
     constructor() {
         this.networks = {
+            anvil: {
+                name: 'Anvil Local',
+                rpcUrl: 'http://127.0.0.1:8545',
+                chainId: 31337,
+                blockTime: 1 // seconds
+            },
             ganache: {
                 name: 'Ganache Local',
                 rpcUrl: 'http://127.0.0.1:7545',
@@ -24,7 +30,7 @@ class BlockchainConfig {
             }
         };
 
-        this.currentNetwork = process.env.BLOCKCHAIN_NETWORK || 'ganache';
+        this.currentNetwork = process.env.BLOCKCHAIN_NETWORK || 'anvil';
     }
 
     getNetworkConfig() {
