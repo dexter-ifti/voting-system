@@ -99,7 +99,10 @@ const voterSchema = new mongoose.Schema({
         documentNumber: String,
         documentUrl: String,
         uploadedAt: Date
-    }]
+    }],
+
+    // Authentication tracking
+    lastLogin: Date
 }, {
     timestamps: true
 });

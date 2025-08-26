@@ -68,17 +68,7 @@ const candidateSchema = new mongoose.Schema({
     // Additional candidate information
     education: String,
     experience: String,
-    achievements: [String],
-    socialMedia: {
-        twitter: String,
-        facebook: String,
-        instagram: String,
-        website: String
-    },
-
-    // Profile media
-    profileImage: String,
-    campaignImages: [String],
+    
 
     // Blockchain-related fields
     onChainCandidateId: {
@@ -122,7 +112,10 @@ const candidateSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Admin'
     },
-    approvedAt: Date
+    approvedAt: Date,
+
+    // Authentication tracking
+    lastLogin: Date
 }, {
     timestamps: true
 });
