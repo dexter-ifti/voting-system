@@ -1,10 +1,142 @@
 // routes/candidate.js
 const express = require('express');
+const jwt = require('jsonwebtoken');
+const { ethers } = require('ethers');
 const { body, param, validationResult } = require('express-validator');
 const Candidate = require('../models/Candidate');
 const Election = require('../models/Election');
 const blockchainService = require('../services/blockchainService');
 const router = express.Router();
+
+// Candidate authentication middleware
+const authenticateCandidate = async (req, res, next) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'No token provided'
+            });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const candidate = await Candidate.findById(decoded.id);
+
+        if (!candidate || !candidate.isActive) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token or candidate account deactivated'
+            });
+        }
+
+        req.candidate = candidate;
+        next();
+    } catch (error) {
+        res.status(401).json({
+            success: false,
+            message: 'Invalid token',
+            error: error.message
+        });
+    }
+};
+
+// Candidate login with wallet signature
+router.post('/login', [
+    body('walletAddress').matches(/^0x[a-fA-F0-9]{40}$/).withMessage('Valid wallet address required'),
+    body('signature').notEmpty().withMessage('Signature is required'),
+    body('message').notEmpty().withMessage('Message is required')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: errors.array()
+            });
+        }
+
+        const { walletAddress, signature, message } = req.body;
+
+        // Verify signature
+        try {
+            const recoveredAddress = ethers.verifyMessage(message, signature);
+            if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid signature'
+                });
+            }
+        } catch (error) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid signature format'
+            });
+        }
+
+        // Find candidate
+        const candidate = await Candidate.findOne({ walletAddress: walletAddress.toLowerCase() });
+        if (!candidate) {
+            return res.status(404).json({
+                success: false,
+                message: 'Candidate not found. Please register first.'
+            });
+        }
+
+        if (!candidate.isActive) {
+            return res.status(401).json({
+                success: false,
+                message: 'Account deactivated'
+            });
+        }
+
+        // Update last login
+        candidate.lastLogin = new Date();
+        await candidate.save();
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { 
+                id: candidate._id, 
+                candidateId: candidate.candidateId,
+                walletAddress: candidate.walletAddress,
+                role: 'candidate' 
+            },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            success: true,
+            message: 'Login successful',
+            data: {
+                candidate: {
+                    candidateId: candidate.candidateId,
+                    name: candidate.name,
+                    party: candidate.party,
+                    walletAddress: candidate.walletAddress,
+                    age: candidate.age,
+                    gender: candidate.gender,
+                    email: candidate.email,
+                    verificationStatus: candidate.verificationStatus,
+                    isActive: candidate.isActive,
+                    isRegisteredOnChain: candidate.isRegisteredOnChain,
+                    lastLogin: candidate.lastLogin
+                },
+                token
+            }
+        });
+
+    } catch (error) {
+        console.error('Candidate login error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Login failed',
+            error: error.message
+        });
+    }
+});
 
 // Register candidate
 router.post('/register', [
@@ -36,7 +168,7 @@ router.post('/register', [
         // Check if candidate already exists
         const existingCandidate = await Candidate.findOne({
             $or: [
-                { walletAddress },
+                { walletAddress: walletAddress.toLowerCase() },
                 { email },
                 { phone }
             ]
@@ -56,7 +188,7 @@ router.post('/register', [
             manifesto,
             age,
             gender,
-            walletAddress,
+            walletAddress: walletAddress.toLowerCase(), // Store in lowercase for consistency
             email,
             phone,
             address,

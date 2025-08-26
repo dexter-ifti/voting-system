@@ -1,10 +1,141 @@
 // routes/voter.js
 const express = require('express');
+const jwt = require('jsonwebtoken');
+const { ethers } = require('ethers');
 const { body, param, validationResult } = require('express-validator');
 const Voter = require('../models/Voter');
 const Election = require('../models/Election');
 const blockchainService = require('../services/blockchainService');
 const router = express.Router();
+
+// Voter authentication middleware
+const authenticateVoter = async (req, res, next) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'No token provided'
+            });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const voter = await Voter.findById(decoded.id);
+
+        if (!voter || !voter.isActive || !voter.isEligible) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token or voter account deactivated/not eligible'
+            });
+        }
+
+        req.voter = voter;
+        next();
+    } catch (error) {
+        res.status(401).json({
+            success: false,
+            message: 'Invalid token',
+            error: error.message
+        });
+    }
+};
+
+// Voter login with wallet signature
+router.post('/login', [
+    body('walletAddress').isEthereumAddress().withMessage('Valid wallet address required'),
+    body('signature').notEmpty().withMessage('Signature is required'),
+    body('message').notEmpty().withMessage('Message is required')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: errors.array()
+            });
+        }
+
+        const { walletAddress, signature, message } = req.body;
+
+        // Verify signature
+        try {
+            const recoveredAddress = ethers.verifyMessage(message, signature);
+            if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid signature'
+                });
+            }
+        } catch (error) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid signature format'
+            });
+        }
+
+        // Find voter
+        const voter = await Voter.findOne({ walletAddress: walletAddress.toLowerCase() });
+        if (!voter) {
+            return res.status(404).json({
+                success: false,
+                message: 'Voter not found. Please register first.'
+            });
+        }
+
+        if (!voter.isEligible) {
+            return res.status(401).json({
+                success: false,
+                message: 'Account not eligible for voting'
+            });
+        }
+
+        // Update last login (add this field to schema if needed)
+        voter.lastLogin = new Date();
+        await voter.save();
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { 
+                id: voter._id, 
+                voterId: voter.voterId,
+                walletAddress: voter.walletAddress,
+                role: 'voter' 
+            },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            success: true,
+            message: 'Login successful',
+            data: {
+                voter: {
+                    voterId: voter.voterId,
+                    name: voter.name,
+                    walletAddress: voter.walletAddress,
+                    age: voter.age,
+                    gender: voter.gender,
+                    email: voter.email,
+                    verificationStatus: voter.verificationStatus,
+                    isEligible: voter.isEligible,
+                    isRegisteredOnChain: voter.isRegisteredOnChain,
+                    lastLogin: voter.lastLogin
+                },
+                token
+            }
+        });
+
+    } catch (error) {
+        console.error('Voter login error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Login failed',
+            error: error.message
+        });
+    }
+});
 
 // Register voter
 router.post('/register', [
@@ -30,7 +161,7 @@ router.post('/register', [
         // Check if voter already exists
         const existingVoter = await Voter.findOne({
             $or: [
-                { walletAddress },
+                { walletAddress: walletAddress.toLowerCase() },
                 ...(email ? [{ email }] : []),
                 ...(phone ? [{ phone }] : [])
             ]
@@ -48,7 +179,7 @@ router.post('/register', [
             name,
             age,
             gender,
-            walletAddress,
+            walletAddress: walletAddress.toLowerCase(), // Store in lowercase for consistency
             email,
             phone,
             address,
