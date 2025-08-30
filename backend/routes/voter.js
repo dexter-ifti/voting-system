@@ -230,7 +230,7 @@ router.post('/register-election', [
         const { contractAddress, walletAddress, privateKey } = req.body;
 
         // Find voter in database
-        const voter = await Voter.findOne({ walletAddress });
+        const voter = await Voter.findOne({ walletAddress: walletAddress.toLowerCase() });
         if (!voter) {
             return res.status(404).json({
                 success: false,
