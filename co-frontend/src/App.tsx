@@ -4,11 +4,14 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { LandingPage } from './pages/LandingPage';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { AdminRegisterPage } from './pages/admin/AdminRegisterPage';
-import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminPortal } from './pages/admin/AdminPortal';
 import { VoterRegisterPage } from './pages/voter/VoterRegisterPage';
 import { VoterLoginPage } from './pages/voter/VoterLoginPage';
 import { CandidateRegisterPage } from './pages/candidate/CandidateRegisterPage';
 import { CandidateLoginPage } from './pages/candidate/CandidateLoginPage';
+import { CandidateDashboard } from './pages/candidate/CandidateDashboard';
+import { VoterDashboard } from './pages/voter/VoterDashboard';
+import { ElectionCandidatesView } from './pages/candidate/ElectionCandidatesView';
 import { ElectionsListPage } from './pages/elections/ElectionsListPage';
 import { ElectionDetailsPage } from './pages/elections/ElectionDetailsPage';
 import { CreateElectionPage } from './pages/elections/CreateElectionPage';
@@ -33,10 +36,13 @@ export default function App() {
         <Route path="/candidate/register" element={<CandidateRegisterPage />} />
         <Route path="/candidate/login" element={<CandidateLoginPage />} />
         <Route element={<DashboardLayout />}>        
-          <Route path="/admin/dashboard" element={<Protected roles={["super_admin","election_admin"]}><AdminDashboard /></Protected>} />
+          <Route path="/admin/dashboard" element={<Protected roles={["super_admin","election_admin"]}><AdminPortal /></Protected>} />
+          <Route path="/candidate/dashboard" element={<Protected roles={["candidate"]}><CandidateDashboard /></Protected>} />
+          <Route path="/voter/dashboard" element={<Protected roles={["voter"]}><VoterDashboard /></Protected>} />
           <Route path="/elections" element={<ElectionsListPage />} />
           <Route path="/elections/create" element={<Protected roles={["super_admin","election_admin"]}><CreateElectionPage /></Protected>} />
           <Route path="/elections/:contractAddress" element={<ElectionDetailsPage />} />
+          <Route path="/elections/:contractAddress/candidates" element={<ElectionCandidatesView />} />
         </Route>
       </Routes>
     </Suspense>

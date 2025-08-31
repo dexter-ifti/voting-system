@@ -26,7 +26,7 @@ export const CandidateLoginPage = () => {
       if (data.success) {
         setUser({ role: 'candidate', token: data.data.token, walletAddress: data.data.candidate.walletAddress, name: data.data.candidate.name });
         toast.success('Logged in');
-        navigate('/elections');
+        navigate('/candidate/dashboard');
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || 'Login failed');
