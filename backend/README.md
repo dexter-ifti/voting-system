@@ -80,10 +80,10 @@ backend/
    sudo systemctl enable mongodb
    ```
 
-3. **Ganache CLI** (for local blockchain)
+3. **Anvil CLI** (for local blockchain)
    ```bash
    # Install globally
-   npm install -g ganache
+   npm install -g anvil
    ```
 
 ### Environment Setup
@@ -152,13 +152,9 @@ brew services start mongodb-community
 net start MongoDB
 ```
 
-**Start Ganache Blockchain:**
+**Start Anvil Blockchain:**
 ```bash
-# Option 1: Using recommended settings
-npx ganache --host 127.0.0.1 --port 7545 --gasLimit 10000000 --gasPrice 20000000000 --accounts 10 --deterministic
-
-# Option 2: Using npm script (if available)
-npm run ganache
+anvil
 ```
 
 ### 2. Setup Database
@@ -319,11 +315,11 @@ sudo systemctl start mongodb
 
 **2. Ganache Connection Error**
 ```bash
-# Check if Ganache is running on correct port
-netstat -tulpn | grep 7545
+# Check if Anvil is running on correct port
+netstat -tulpn | grep 8545
 
-# Restart Ganache with correct settings
-npx ganache --host 127.0.0.1 --port 7545 --gasLimit 10000000
+# Restart Anvil with correct settings
+anvil
 ```
 
 **3. Contract Deployment Failed**
@@ -332,8 +328,8 @@ npx ganache --host 127.0.0.1 --port 7545 --gasLimit 10000000
 # Ensure gasLimit is high enough (10,000,000+)
 # Verify bytecode is not too large
 
-# Restart Ganache with higher limits
-npx ganache --gasLimit 10000000 --gasPrice 20000000000
+# Restart Anvil with higher limits
+anvil --host 127.0.0.1 --port 8545 --gasLimit 10000000
 ```
 
 **4. JWT Token Errors**
@@ -383,18 +379,3 @@ ADMIN_PRIVATE_KEY=your-secure-production-private-key
 FRONTEND_URL=https://your-production-frontend.com
 ```
 
-## License
-
-This project is part of a Final Project implementation for educational purposes.
-
-## Support
-
-For issues and questions:
-1. Check the troubleshooting section
-2. Review logs for error messages
-3. Verify all prerequisites are installed
-4. Ensure all services are running
-
----
-
-**Last Updated**: 2024-12-19

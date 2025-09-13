@@ -30,8 +30,8 @@ npm install
 # Start MongoDB (if not running)
 sudo systemctl start mongodb
 
-# Start Ganache blockchain
-npx ganache --host 127.0.0.1 --port 7545 --gasLimit 10000000 --gasPrice 20000000000 --accounts 10 --deterministic
+# Start Anvil blockchain
+anvil 
 
 # Compile and deploy contracts
 node scripts/compile-basic-voting.js
@@ -85,7 +85,7 @@ MONGODB_URI=mongodb://localhost:27017/voting_system
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 
 # Blockchain (defaults work for development)
-BLOCKCHAIN_RPC_URL=http://127.0.0.1:7545
+BLOCKCHAIN_RPC_URL=http://127.0.0.1:8545
 ADMIN_PRIVATE_KEY=0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d
 
 # Server
@@ -106,10 +106,10 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
 
 ### 3. **Blockchain Credentials**
-- **Development**: Use provided Ganache defaults (already set)
+- **Development**: Use provided Anvil defaults (already set)
 - **Production**: Use your own wallet private key and network URL
 
-### 4. **Ganache Default Accounts** (for development)
+### 4. **Anvil Default Accounts** (for development)
 ```
 Account 0: 0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1
 Private Key: 0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d
@@ -120,8 +120,8 @@ Balance: 1000 ETH
 
 ### Development Mode
 ```bash
-# Terminal 1: Start Ganache
-npx ganache --host 127.0.0.1 --port 7545 --gasLimit 10000000
+# Terminal 1: Start Anvil (or Ganache)
+anvil
 
 # Terminal 2: Start Backend
 npm run dev
@@ -174,14 +174,14 @@ curl http://localhost:3000/api/blockchain/status
    sudo systemctl start mongodb
    ```
 
-2. **Ganache Not Running**
+2. **Anvil Not Running**
    ```bash
-   npx ganache --host 127.0.0.1 --port 7545 --gasLimit 10000000
+   anvil
    ```
 
 3. **Contract Deployment Failed**
-   - Restart Ganache with higher gas limit
-   - Check if port 7545 is available
+   - Restart Anvil with higher gas limit
+   - Check if port 8545 is available
 
 4. **Port Already in Use**
    ```bash
@@ -219,7 +219,7 @@ When everything is working, you'll see:
 ✅ MongoDB connected successfully
 ✅ Smart contracts deployed to: 0x...
 ✅ Server running on port 3000
-✅ Blockchain connected: http://127.0.0.1:7545
+✅ Blockchain connected: http://127.0.0.1:8545
 ```
 
 ---
