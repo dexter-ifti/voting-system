@@ -26,7 +26,7 @@ export const VoterLoginPage = () => {
       if (data.success) {
         setUser({ role: 'voter', token: data.data.token, walletAddress: data.data.voter.walletAddress, name: data.data.voter.name });
         toast.success('Logged in');
-        navigate('/elections');
+        navigate('/voter/dashboard');
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || 'Login failed');
