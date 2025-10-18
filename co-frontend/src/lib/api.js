@@ -11,3 +11,14 @@ api.interceptors.request.use(config => {
     }
     return config;
 });
+// Response interceptor to handle token expiry
+api.interceptors.response.use((response) => response, (error) => {
+    if (error.response?.status === 401) {
+        // Token is invalid or expired, logout user
+        const logout = useAuthStore.getState().logout;
+        logout();
+        // Redirect to home page
+        window.location.href = '/';
+    }
+    return Promise.reject(error);
+});
