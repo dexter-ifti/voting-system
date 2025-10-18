@@ -207,20 +207,47 @@ router.get('/:contractAddress', [
             });
         }
 
-        // Get blockchain data
-        const blockchainInfo = await blockchainService.getElectionInfo(contractAddress);
-        const votingStatus = await blockchainService.getVotingStatus(contractAddress);
-        const candidates = await blockchainService.getCandidateList(contractAddress);
+        // Get blockchain data with fallback
+        let blockchainData = {
+            title: election.title,
+            description: election.description,
+            startTime: '0',
+            endTime: '0',
+            isActive: false,
+            totalVotes: '0',
+            resultsAnnounced: false,
+            votingStatus: { isActive: false, canVote: false },
+            candidates: []
+        };
+
+        try {
+            const blockchainInfo = await blockchainService.getElectionInfo(contractAddress);
+            const votingStatus = await blockchainService.getVotingStatus(contractAddress);
+            const candidates = await blockchainService.getCandidateList(contractAddress);
+
+            blockchainData = {
+                ...blockchainInfo,
+                votingStatus,
+                candidates
+            };
+        } catch (blockchainError) {
+            console.warn('⚠️ Blockchain data unavailable for election:', contractAddress, blockchainError.message);
+            // Use database data as fallback
+            blockchainData.candidates = election.candidates.map(c => ({
+                candidateId: c.candidateId._id,
+                name: c.candidateId.name,
+                party: c.candidateId.party,
+                walletAddress: c.candidateId.walletAddress,
+                votes: '0',
+                manifesto: ''
+            }));
+        }
 
         res.json({
             success: true,
             data: {
                 election,
-                blockchain: {
-                    ...blockchainInfo,
-                    votingStatus,
-                    candidates
-                }
+                blockchain: blockchainData
             }
         });
 
