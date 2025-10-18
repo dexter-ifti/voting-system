@@ -19,12 +19,26 @@ import { useAuthStore } from './stores/authStore';
 
 const Protected = ({ children, roles }: { children: JSX.Element; roles?: string[] }) => {
   const user = useAuthStore(s => s.user);
+  const isInitialized = useAuthStore(s => s.isInitialized);
+  
+  // Show loading while auth state is being rehydrated
+  if (!isInitialized) {
+    return <div className="p-8">Loading...</div>;
+  }
+  
   if (!user) return <Navigate to="/" replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
 };
 
 export default function App() {
+  const isInitialized = useAuthStore(s => s.isInitialized);
+  
+  // Show loading while auth state is being rehydrated
+  if (!isInitialized) {
+    return <div className="p-8">Loading...</div>;
+  }
+  
   return (
     <Suspense fallback={<div className="p-8">Loading...</div>}>
       <Routes>

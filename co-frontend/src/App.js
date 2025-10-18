@@ -19,6 +19,11 @@ import { CreateElectionPage } from './pages/elections/CreateElectionPage';
 import { useAuthStore } from './stores/authStore';
 const Protected = ({ children, roles }) => {
     const user = useAuthStore(s => s.user);
+    const isInitialized = useAuthStore(s => s.isInitialized);
+    // Show loading while auth state is being rehydrated
+    if (!isInitialized) {
+        return _jsx("div", { className: "p-8", children: "Loading..." });
+    }
     if (!user)
         return _jsx(Navigate, { to: "/", replace: true });
     if (roles && !roles.includes(user.role))
@@ -26,5 +31,10 @@ const Protected = ({ children, roles }) => {
     return children;
 };
 export default function App() {
+    const isInitialized = useAuthStore(s => s.isInitialized);
+    // Show loading while auth state is being rehydrated
+    if (!isInitialized) {
+        return _jsx("div", { className: "p-8", children: "Loading..." });
+    }
     return (_jsx(Suspense, { fallback: _jsx("div", { className: "p-8", children: "Loading..." }), children: _jsxs(Routes, { children: [_jsx(Route, { path: "/", element: _jsx(LandingPage, {}) }), _jsx(Route, { path: "/admin/login", element: _jsx(AdminLoginPage, {}) }), _jsx(Route, { path: "/admin/register", element: _jsx(AdminRegisterPage, {}) }), _jsx(Route, { path: "/voter/register", element: _jsx(VoterRegisterPage, {}) }), _jsx(Route, { path: "/voter/login", element: _jsx(VoterLoginPage, {}) }), _jsx(Route, { path: "/candidate/register", element: _jsx(CandidateRegisterPage, {}) }), _jsx(Route, { path: "/candidate/login", element: _jsx(CandidateLoginPage, {}) }), _jsxs(Route, { element: _jsx(DashboardLayout, {}), children: [_jsx(Route, { path: "/admin/dashboard", element: _jsx(Protected, { roles: ["super_admin", "election_admin"], children: _jsx(AdminPortal, {}) }) }), _jsx(Route, { path: "/candidate/dashboard", element: _jsx(Protected, { roles: ["candidate"], children: _jsx(CandidateDashboard, {}) }) }), _jsx(Route, { path: "/voter/dashboard", element: _jsx(Protected, { roles: ["voter"], children: _jsx(VoterDashboard, {}) }) }), _jsx(Route, { path: "/elections", element: _jsx(ElectionsListPage, {}) }), _jsx(Route, { path: "/elections/create", element: _jsx(Protected, { roles: ["super_admin", "election_admin"], children: _jsx(CreateElectionPage, {}) }) }), _jsx(Route, { path: "/elections/:contractAddress", element: _jsx(ElectionDetailsPage, {}) }), _jsx(Route, { path: "/elections/:contractAddress/candidates", element: _jsx(ElectionCandidatesView, {}) })] })] }) }));
 }
