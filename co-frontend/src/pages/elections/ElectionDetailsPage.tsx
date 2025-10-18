@@ -25,8 +25,11 @@ export const ElectionDetailsPage = () => {
     try {
       const { data } = await api.get(`/election/${contractAddress}`);
       if (data.success) setData(data.data);
-    } catch (e) {
-      // ignore
+    } catch (e: any) {
+      console.error('Failed to load election:', e);
+      console.error('Contract address:', contractAddress);
+      console.error('Error response:', e.response?.data);
+      // Don't ignore the error, let the user know what happened
     } finally {
       setLoading(false);
     }
@@ -61,7 +64,17 @@ export const ElectionDetailsPage = () => {
   };
 
   if (loading) return <div className="p-8 text-sm text-slate-400">Loading...</div>;
-  if (!data) return <div className="p-8 text-sm text-red-400">Election not found</div>;
+  if (!data) return (
+    <div className="p-8 text-sm text-red-400">
+      <div>Election not found</div>
+      <div className="text-xs text-slate-500 mt-2">
+        Contract Address: {contractAddress}
+      </div>
+      <div className="text-xs text-slate-500">
+        Check the browser console for more details.
+      </div>
+    </div>
+  );
 
   const election = data.election;
   const candidates: Candidate[] = data.blockchain.candidates || [];

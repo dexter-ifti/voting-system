@@ -9,6 +9,7 @@ interface Election {
   electionType: string;
   contractAddress: string;
   status: string;
+  maxCandidates?: number;
   deployedBy: {
     name: string;
     email: string;
@@ -54,6 +55,9 @@ export const ElectionManagement = () => {
   const [announceResultsForm, setAnnounceResultsForm] = useState({ show: false, privateKey: '' });
   const [processing, setProcessing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [addVoterForm, setAddVoterForm] = useState({ walletAddress: '', privateKey: '', loading: false });
+  const [addCandidateForm, setAddCandidateForm] = useState({ walletAddress: '', privateKey: '', loading: false });
+  const [timingForm, setTimingForm] = useState({ startInMinutes: 10, durationMinutes: 60, privateKey: '', loading: false, title: '', description: '' });
 
   const loadElections = async () => {
     setLoading(true);
@@ -133,6 +137,73 @@ export const ElectionManagement = () => {
       alert('Failed to announce results');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleOpenRegistration = async () => {
+    if (!selectedElection || !timingForm.privateKey) return;
+    setTimingForm(prev => ({ ...prev, loading: true }));
+    try {
+      const payload: any = {
+        startTimeFromNow: Math.max(60, Math.floor((timingForm.startInMinutes || 0) * 60)),
+        durationInSeconds: Math.max(60, Math.floor((timingForm.durationMinutes || 0) * 60)),
+        adminPrivateKey: timingForm.privateKey.trim()
+      };
+      if (timingForm.title.trim()) payload.title = timingForm.title.trim();
+      if (timingForm.description.trim()) payload.description = timingForm.description.trim();
+
+      const { data } = await api.put(`/election/${selectedElection.contractAddress}/timing`, payload);
+      if (data.success) {
+        alert('Registration opened and timing set successfully');
+        setTimingForm({ startInMinutes: 10, durationMinutes: 60, privateKey: '', loading: false, title: '', description: '' });
+        await loadElections();
+        if (selectedElection) await loadAnalytics(selectedElection.contractAddress);
+      }
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Failed to open registration');
+      setTimingForm(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleAddVoterToElection = async () => {
+    if (!selectedElection || !addVoterForm.walletAddress || !addVoterForm.privateKey) return;
+    setAddVoterForm(prev => ({ ...prev, loading: true }));
+    try {
+      const { data } = await api.post('/voter/register-election', {
+        contractAddress: selectedElection.contractAddress,
+        walletAddress: addVoterForm.walletAddress.trim(),
+        privateKey: addVoterForm.privateKey.trim()
+      });
+      if (data.success) {
+        alert('Voter added to election successfully');
+        setAddVoterForm({ walletAddress: '', privateKey: '', loading: false });
+        await loadElections();
+        if (selectedElection) await loadAnalytics(selectedElection.contractAddress);
+      }
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Failed to add voter to election');
+      setAddVoterForm(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleAddCandidateToElection = async () => {
+    if (!selectedElection || !addCandidateForm.walletAddress || !addCandidateForm.privateKey) return;
+    setAddCandidateForm(prev => ({ ...prev, loading: true }));
+    try {
+      const { data } = await api.post('/candidate/register-election', {
+        contractAddress: selectedElection.contractAddress,
+        walletAddress: addCandidateForm.walletAddress.trim(),
+        privateKey: addCandidateForm.privateKey.trim()
+      });
+      if (data.success) {
+        alert('Candidate added to election successfully');
+        setAddCandidateForm({ walletAddress: '', privateKey: '', loading: false });
+        await loadElections();
+        if (selectedElection) await loadAnalytics(selectedElection.contractAddress);
+      }
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Failed to add candidate to election');
+      setAddCandidateForm(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -426,10 +497,149 @@ export const ElectionManagement = () => {
                       </div>
                     </div>
                   )}
+
                 </div>
               ) : (
                 <div className="text-center py-8 text-slate-400">No analytics available</div>
               )}
+              {/* Admin Actions: Add Eligible Voter / Candidate (Always visible) */}
+              <div className="mt-6 grid md:grid-cols-2 gap-6">
+                <div className="p-4 border border-border rounded-lg">
+                  <h3 className="font-medium mb-3">Add Eligible Voter</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs mb-1">Voter Wallet Address</label>
+                      <input
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        placeholder="0x..."
+                        value={addVoterForm.walletAddress}
+                        onChange={(e) => setAddVoterForm(prev => ({ ...prev, walletAddress: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1">Admin/Authorized Private Key</label>
+                      <input
+                        type="password"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        placeholder="Enter private key"
+                        value={addVoterForm.privateKey}
+                        onChange={(e) => setAddVoterForm(prev => ({ ...prev, privateKey: e.target.value }))}
+                      />
+                    </div>
+                    <button
+                      onClick={handleAddVoterToElection}
+                      disabled={addVoterForm.loading || !addVoterForm.walletAddress || !addVoterForm.privateKey}
+                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+                    >
+                      {addVoterForm.loading ? 'Adding...' : 'Add Voter to Election'}
+                    </button>
+                    <p className="text-[10px] text-muted-foreground">Voter must be registered and verified first.</p>
+                  </div>
+                </div>
+
+                <div className="p-4 border border-border rounded-lg">
+                  <h3 className="font-medium mb-3">Add Candidate</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs mb-1">Candidate Wallet Address</label>
+                      <input
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        placeholder="0x..."
+                        value={addCandidateForm.walletAddress}
+                        onChange={(e) => setAddCandidateForm(prev => ({ ...prev, walletAddress: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1">Admin/Authorized Private Key</label>
+                      <input
+                        type="password"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        placeholder="Enter private key"
+                        value={addCandidateForm.privateKey}
+                        onChange={(e) => setAddCandidateForm(prev => ({ ...prev, privateKey: e.target.value }))}
+                      />
+                    </div>
+                    <button
+                      onClick={handleAddCandidateToElection}
+                      disabled={addCandidateForm.loading || !addCandidateForm.walletAddress || !addCandidateForm.privateKey}
+                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm"
+                    >
+                      {addCandidateForm.loading ? 'Adding...' : 'Add Candidate to Election'}
+                    </button>
+                    <p className="text-[10px] text-muted-foreground">Candidate must be registered and verified first. Max {selectedElection?.candidates ? selectedElection?.candidates.length : 0}/{selectedElection?.maxCandidates ?? 'N/A'} allowed.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Controls: Open Registration / Set Timing */}
+              <div className="mt-6 p-4 border border-border rounded-lg">
+                <h3 className="font-medium mb-3">Open Registration / Set Timing</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs mb-1">Title (optional)</label>
+                      <input
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        placeholder="Update election title"
+                        value={timingForm.title}
+                        onChange={(e) => setTimingForm(prev => ({ ...prev, title: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1">Description (optional)</label>
+                      <textarea
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        rows={2}
+                        placeholder="Update election description"
+                        value={timingForm.description}
+                        onChange={(e) => setTimingForm(prev => ({ ...prev, description: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs mb-1">Start In (minutes)</label>
+                        <input
+                          type="number"
+                          min={1}
+                          className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                          value={timingForm.startInMinutes}
+                          onChange={(e) => setTimingForm(prev => ({ ...prev, startInMinutes: Number(e.target.value) }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs mb-1">Duration (minutes)</label>
+                        <input
+                          type="number"
+                          min={1}
+                          className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                          value={timingForm.durationMinutes}
+                          onChange={(e) => setTimingForm(prev => ({ ...prev, durationMinutes: Number(e.target.value) }))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1">Admin Private Key</label>
+                      <input
+                        type="password"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        placeholder="Enter your private key"
+                        value={timingForm.privateKey}
+                        onChange={(e) => setTimingForm(prev => ({ ...prev, privateKey: e.target.value }))}
+                      />
+                    </div>
+                    <button
+                      onClick={handleOpenRegistration}
+                      disabled={timingForm.loading || !timingForm.privateKey}
+                      className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm"
+                    >
+                      {timingForm.loading ? 'Updating...' : 'Open Registration & Set Timing'}
+                    </button>
+                    <p className="text-[10px] text-muted-foreground">This sets start/end on-chain and updates status to registration_open.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

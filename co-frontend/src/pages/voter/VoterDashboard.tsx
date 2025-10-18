@@ -99,14 +99,12 @@ export const VoterDashboard = () => {
 
   const loadAvailableElections = async () => {
     try {
-      const { data } = await api.get('/election/available');
+      // Query backend for elections with registration open
+      const { data } = await api.get('/election', { params: { status: 'registration_open', limit: 50 } });
       if (data.success) {
-        // Filter out elections already registered for
         const registeredElectionIds = voterElections.map(e => e.electionId._id);
-        const available = data.data.elections.filter(
-          (election: Election) => 
-            !registeredElectionIds.includes(election._id) &&
-            election.status === 'registration_open'
+        const available = (data.data.elections || []).filter(
+          (election: Election) => !registeredElectionIds.includes(election._id)
         );
         setAvailableElections(available);
       }
@@ -180,9 +178,8 @@ export const VoterDashboard = () => {
   }, [user]);
 
   useEffect(() => {
-    if (voterElections.length > 0) {
-      loadAvailableElections();
-    }
+    // Load available elections regardless of how many the voter is already in
+    loadAvailableElections();
   }, [voterElections]);
 
   const renderDashboard = () => (
