@@ -159,7 +159,7 @@ const electionSchema = new mongoose.Schema({
     blockchain: {
         network: {
             type: String,
-            default: 'ganache'
+            default: process.env.BLOCKCHAIN_NETWORK || 'anvil'
         },
         networkId: Number,
         blockNumber: Number

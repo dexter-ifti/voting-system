@@ -158,6 +158,28 @@ const CONTRACT_ABI = [
     },
     {
         "inputs": [],
+        "name": "getElectionInfo",
+        "outputs": [
+            {
+                "components": [
+                    { "internalType": "string", "name": "title", "type": "string" },
+                    { "internalType": "string", "name": "description", "type": "string" },
+                    { "internalType": "uint256", "name": "startTime", "type": "uint256" },
+                    { "internalType": "uint256", "name": "endTime", "type": "uint256" },
+                    { "internalType": "bool", "name": "isActive", "type": "bool" },
+                    { "internalType": "uint256", "name": "totalVotes", "type": "uint256" },
+                    { "internalType": "bool", "name": "resultsAnnounced", "type": "bool" }
+                ],
+                "internalType": "struct VotingSystem.Election",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "getResults",
         "outputs": [
             { "internalType": "address", "name": "winnerAddress", "type": "address" },
@@ -462,7 +484,7 @@ class BlockchainService {
     async getElectionInfo(contractAddress) {
         try {
             const contract = this.getContract(contractAddress);
-            const details = await contract.electionDetails();
+            const details = await contract.getElectionInfo();
 
             return {
                 title: details.title,

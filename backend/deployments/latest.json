@@ -1,8 +1,9 @@
 {
-  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "transactionHash": "0x51dfb856b5897c496fb74ac199cd4e51aa36a7bb411f4d58ce81de2601186b90",
-  "deployedAt": "2025-08-15T03:22:34.969Z",
-  "network": "anvil-local",
-  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "contractName": "VotingSystem"
+  "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "blockNumber": 0,
+  "timestamp": "2025-10-21T18:27:02.307Z",
+  "constructor": {
+    "title": "Test Election 2025",
+    "description": "Democratic voting for test purposes"
+  }
 }
