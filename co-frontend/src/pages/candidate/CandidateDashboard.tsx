@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../lib/api';
+import { api, registerCandidateForElection } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 import { CandidateAnalytics } from './CandidateAnalytics';
+import { ElectionResults } from '../../components/ElectionResults';
 
 interface CandidateProfile {
   _id: string;
@@ -54,11 +55,12 @@ export const CandidateDashboard = () => {
   const [availableElections, setAvailableElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState<string>('');
-  const [currentView, setCurrentView] = useState<'dashboard' | 'profile' | 'elections' | 'register' | 'analytics'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'profile' | 'elections' | 'register' | 'analytics' | 'results'>('dashboard');
   const [registerForm, setRegisterForm] = useState({
     contractAddress: '',
     privateKey: ''
   });
+  const [selectedResultsContractAddress, setSelectedResultsContractAddress] = useState<string>('');
 
   const loadProfile = async () => {
     if (!user?.walletAddress) return;
@@ -99,17 +101,19 @@ export const CandidateDashboard = () => {
 
     setRegistering(contractAddress);
     try {
-      const { data } = await api.post('/candidate/register-election', {
+      const result = await registerCandidateForElection({
         contractAddress,
-        walletAddress: user?.walletAddress,
+        walletAddress: user?.walletAddress || '',
         privateKey: registerForm.privateKey
       });
 
-      if (data.success) {
+      if (result.success) {
         alert('Successfully registered for election!');
         setRegisterForm({ contractAddress: '', privateKey: '' });
         await loadProfile();
         await loadAvailableElections();
+      } else {
+        alert(result.message || 'Failed to register for election');
       }
     } catch (error: any) {
       alert(error.response?.data?.message || 'Failed to register for election');
@@ -327,6 +331,21 @@ export const CandidateDashboard = () => {
                   <div className="text-xs text-muted-foreground">Contract Address</div>
                 </div>
               </div>
+              
+              {/* View Results Button for Announced Results */}
+              {election.electionId.status === 'results_announced' && (
+                <div className="mt-4">
+                  <button
+                    onClick={() => {
+                      setSelectedResultsContractAddress(election.electionId.contractAddress);
+                      setCurrentView('results');
+                    }}
+                    className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    📊 View Election Results
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -428,6 +447,26 @@ export const CandidateDashboard = () => {
         return renderRegister();
       case 'analytics':
         return <CandidateAnalytics />;
+      case 'results':
+        return selectedResultsContractAddress ? (
+          <ElectionResults 
+            contractAddress={selectedResultsContractAddress}
+            onClose={() => {
+              setCurrentView('dashboard');
+              setSelectedResultsContractAddress('');
+            }}
+          />
+        ) : (
+          <div className="text-center p-8">
+            <p className="text-muted-foreground">No election selected for results viewing.</p>
+            <button 
+              onClick={() => setCurrentView('dashboard')}
+              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        );
       default:
         return renderDashboard();
     }
@@ -492,6 +531,16 @@ export const CandidateDashboard = () => {
               }`}
             >
               Analytics
+            </button>
+            <button
+              onClick={() => setCurrentView('results')}
+              className={`py-4 text-sm font-medium border-b-2 transition-colors ${
+                currentView === 'results'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Results
             </button>
             {profile.verificationStatus === 'verified' && (
               <button
