@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../lib/api';
+import { api, updateElectionStatus } from '../../lib/api';
 import { CreateElectionForm } from './CreateElectionForm';
 
 interface Election {
@@ -43,6 +43,7 @@ interface ElectionsResponse {
 export const ElectionManagement = () => {
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [status, setStatus] = useState<string>('');
@@ -58,24 +59,38 @@ export const ElectionManagement = () => {
   const [addVoterForm, setAddVoterForm] = useState({ walletAddress: '', privateKey: '', loading: false });
   const [addCandidateForm, setAddCandidateForm] = useState({ walletAddress: '', privateKey: '', loading: false });
   const [timingForm, setTimingForm] = useState({ startInMinutes: 10, durationMinutes: 60, privateKey: '', loading: false, title: '', description: '' });
+  const [statusChangeForm, setStatusChangeForm] = useState({ show: false, newStatus: '', loading: false });
+
+  const fetchElections = async () => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (electionType) params.append('electionType', electionType);
+    if (search) params.append('search', search);
+    params.append('page', page.toString());
+    params.append('limit', '10');
+
+    const { data } = await api.get(`/election?${params}`);
+    return data;
+  };
 
   const loadElections = async () => {
     setLoading(true);
+    setError(null);
+    console.log('Loading elections...');
     try {
-      const params = new URLSearchParams();
-      params.append('page', page.toString());
-      params.append('limit', '20');
-      if (status) params.append('status', status);
-      if (electionType) params.append('electionType', electionType);
-      if (search) params.append('search', search);
-
-      const { data } = await api.get(`/election?${params.toString()}`);
-      if (data.success) {
-        setElections(data.data.elections);
-        setTotalPages(data.data.totalPages);
+      const response = await fetchElections();
+      console.log('Elections response:', response);
+      if (response.success) {
+        setElections(response.data.elections || []);
+        setTotalPages(response.data.totalPages || 1);
+        console.log('Elections loaded:', response.data.elections?.length || 0, 'elections');
+      } else {
+        console.error('Failed to fetch elections:', response.message);
+        setError(response.message || 'Failed to load elections');
       }
-    } catch (error) {
-      console.error('Failed to load elections:', error);
+    } catch (error: any) {
+      console.error('Error loading elections:', error);
+      setError(error?.response?.data?.message || error.message || 'Failed to load elections');
     } finally {
       setLoading(false);
     }
@@ -137,6 +152,35 @@ export const ElectionManagement = () => {
       alert('Failed to announce results');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleStatusChange = async () => {
+    if (!selectedElection || !statusChangeForm.newStatus) return;
+    
+    alert(`Attempting to change status of election ${selectedElection.contractAddress} from ${selectedElection.status} to ${statusChangeForm.newStatus}`);
+    
+    setStatusChangeForm(prev => ({ ...prev, loading: true }));
+    try {
+      const response = await updateElectionStatus({
+        contractAddress: selectedElection.contractAddress,
+        status: statusChangeForm.newStatus
+      });
+      
+      console.log('Status update response:', response);
+      
+      if (response.success) {
+        setStatusChangeForm({ show: false, newStatus: '', loading: false });
+        await loadElections();
+        alert(`Election status successfully changed to ${statusChangeForm.newStatus}!`);
+      } else {
+        alert(`Failed: ${response.message || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Failed to update status:', error);
+      alert(`Error: ${error?.response?.data?.message || error.message || 'Failed to update election status'}`);
+    } finally {
+      setStatusChangeForm(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -234,7 +278,7 @@ export const ElectionManagement = () => {
         <h1 className="text-2xl font-semibold">Election Management</h1>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           Create New Election
         </button>
@@ -248,11 +292,11 @@ export const ElectionManagement = () => {
             placeholder="Search by title or description"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-2 border border-border rounded-lg bg-background text-sm"
+            className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
           >
             Search
           </button>
@@ -261,7 +305,7 @@ export const ElectionManagement = () => {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="px-3 py-2 border border-border rounded-lg bg-background text-sm"
+          className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
         >
           <option value="">All Status</option>
           <option value="created">Created</option>
@@ -274,7 +318,7 @@ export const ElectionManagement = () => {
         <select
           value={electionType}
           onChange={(e) => setElectionType(e.target.value)}
-          className="px-3 py-2 border border-border rounded-lg bg-background text-sm"
+          className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
         >
           <option value="">All Types</option>
           <option value="presidential">Presidential</option>
@@ -288,12 +332,35 @@ export const ElectionManagement = () => {
 
       {/* Elections Table */}
       {loading ? (
-        <div className="text-center py-8 text-slate-400">Loading elections...</div>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <div className="text-gray-600">Loading elections...</div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-8">
+          <div className="text-red-600 mb-4">❌ {error}</div>
+          <button 
+            onClick={loadElections}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : elections.length === 0 ? (
+        <div className="text-center py-8">
+          <div className="text-gray-500 mb-4">No elections found</div>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Create First Election
+          </button>
+        </div>
       ) : (
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="bg-green-500 border border-gray-300 rounded-lg overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-muted/50">
+              <thead className="bg-red-500">
                 <tr>
                   <th className="text-left p-4 font-medium">Title</th>
                   <th className="text-left p-4 font-medium">Type</th>
@@ -307,11 +374,11 @@ export const ElectionManagement = () => {
               </thead>
               <tbody>
                 {elections.map((election) => (
-                  <tr key={election._id} className="border-t border-border">
+                  <tr key={election._id} className="border-t border-gray-200 hover:bg-gray-50">
                     <td className="p-4">
                       <div>
                         <div className="font-medium">{election.title}</div>
-                        <div className="text-xs text-muted-foreground font-mono">
+                        <div className="text-xs text-gray-500 font-mono">
                           {election.contractAddress.slice(0, 10)}...
                         </div>
                       </div>
@@ -356,6 +423,18 @@ export const ElectionManagement = () => {
                           <button
                             onClick={() => {
                               setSelectedElection(election);
+                              setStatusChangeForm({ show: true, newStatus: 'voting_ended', loading: false });
+                            }}
+                            className="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700"
+                            title="End voting period"
+                          >
+                            End Voting
+                          </button>
+                        )}
+                        {election.status === 'voting_ended' && (
+                          <button
+                            onClick={() => {
+                              setSelectedElection(election);
                               setAnnounceResultsForm({ show: true, privateKey: '' });
                             }}
                             className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
@@ -363,6 +442,16 @@ export const ElectionManagement = () => {
                             Results
                           </button>
                         )}
+                        <button
+                          onClick={() => {
+                            setSelectedElection(election);
+                            setStatusChangeForm({ show: true, newStatus: '', loading: false });
+                          }}
+                          className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700"
+                          title="Change Election Status"
+                        >
+                          Status
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -373,21 +462,21 @@ export const ElectionManagement = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="p-4 border-t border-border flex justify-center gap-2">
+            <div className="p-4 border-t border-gray-200 flex justify-center gap-2">
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 border border-border rounded disabled:opacity-50"
+                className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 bg-white hover:bg-gray-50"
               >
                 Previous
               </button>
-              <span className="px-3 py-1 text-sm text-muted-foreground">
+              <span className="px-3 py-1 text-sm text-gray-600">
                 Page {page} of {totalPages}
               </span>
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1 border border-border rounded disabled:opacity-50"
+                className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 bg-white hover:bg-gray-50"
               >
                 Next
               </button>
@@ -397,9 +486,9 @@ export const ElectionManagement = () => {
       )}
 
       {/* Election Details Modal */}
-      {selectedElection && !emergencyStopForm.show && !announceResultsForm.show && (
+      {selectedElection && !emergencyStopForm.show && !announceResultsForm.show && !statusChangeForm.show && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-lg max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="bg-green-500 border border-gray-300 rounded-lg max-w-4xl w-full max-h-[80vh] overflow-y-auto shadow-xl">
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-xl font-semibold">Election Analytics</h2>
@@ -408,7 +497,7 @@ export const ElectionManagement = () => {
                     setSelectedElection(null);
                     setAnalytics(null);
                   }}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-gray-500 hover:text-gray-700"
                 >
                   ✕
                 </button>
@@ -421,19 +510,19 @@ export const ElectionManagement = () => {
                   {/* Basic Info */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Title</label>
+                      <label className="text-sm font-medium text-gray-600">Title</label>
                       <p>{analytics.election.title}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Status</label>
+                      <label className="text-sm font-medium text-gray-600">Status</label>
                       <p className="capitalize">{analytics.election.status.replace('_', ' ')}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Total Registered</label>
+                      <label className="text-sm font-medium text-gray-600">Total Registered</label>
                       <p>{analytics.election.totalRegistered}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Total Voted</label>
+                      <label className="text-sm font-medium text-gray-600">Total Voted</label>
                       <p>{analytics.election.totalVoted}</p>
                     </div>
                   </div>
@@ -444,20 +533,20 @@ export const ElectionManagement = () => {
                       <h3 className="font-medium mb-3">Vote Distribution</h3>
                       <div className="space-y-2">
                         {analytics.voteDistribution.map((candidate: any, index: number) => (
-                          <div key={index} className="bg-muted/50 p-3 rounded">
+                          <div key={index} className="bg-gray-100 p-3 rounded">
                             <div className="flex justify-between items-center">
                               <div>
                                 <span className="font-medium">{candidate.name}</span>
-                                <span className="text-muted-foreground ml-2">({candidate.party})</span>
+                                <span className="text-gray-600 ml-2">({candidate.party})</span>
                               </div>
                               <div className="text-right">
                                 <div className="font-medium">{candidate.votes} votes</div>
-                                <div className="text-sm text-muted-foreground">{candidate.percentage.toFixed(1)}%</div>
+                                <div className="text-sm text-gray-600">{candidate.percentage.toFixed(1)}%</div>
                               </div>
                             </div>
-                            <div className="mt-2 bg-muted rounded-full h-2">
+                            <div className="mt-2 bg-gray-200 rounded-full h-2">
                               <div 
-                                className="bg-primary h-2 rounded-full transition-all"
+                                className="bg-blue-600 h-2 rounded-full transition-all"
                                 style={{ width: `${candidate.percentage}%` }}
                               />
                             </div>
@@ -504,13 +593,13 @@ export const ElectionManagement = () => {
               )}
               {/* Admin Actions: Add Eligible Voter / Candidate (Always visible) */}
               <div className="mt-6 grid md:grid-cols-2 gap-6">
-                <div className="p-4 border border-border rounded-lg">
+                <div className="p-4 border border-gray-300 rounded-lg">
                   <h3 className="font-medium mb-3">Add Eligible Voter</h3>
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs mb-1">Voter Wallet Address</label>
                       <input
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                         placeholder="0x..."
                         value={addVoterForm.walletAddress}
                         onChange={(e) => setAddVoterForm(prev => ({ ...prev, walletAddress: e.target.value }))}
@@ -520,7 +609,7 @@ export const ElectionManagement = () => {
                       <label className="block text-xs mb-1">Admin/Authorized Private Key</label>
                       <input
                         type="password"
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                         placeholder="Enter private key"
                         value={addVoterForm.privateKey}
                         onChange={(e) => setAddVoterForm(prev => ({ ...prev, privateKey: e.target.value }))}
@@ -533,17 +622,17 @@ export const ElectionManagement = () => {
                     >
                       {addVoterForm.loading ? 'Adding...' : 'Add Voter to Election'}
                     </button>
-                    <p className="text-[10px] text-muted-foreground">Voter must be registered and verified first.</p>
+                    <p className="text-[10px] text-gray-600">Voter must be registered and verified first.</p>
                   </div>
                 </div>
 
-                <div className="p-4 border border-border rounded-lg">
+                <div className="p-4 border border-gray-300 rounded-lg">
                   <h3 className="font-medium mb-3">Add Candidate</h3>
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs mb-1">Candidate Wallet Address</label>
                       <input
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                         placeholder="0x..."
                         value={addCandidateForm.walletAddress}
                         onChange={(e) => setAddCandidateForm(prev => ({ ...prev, walletAddress: e.target.value }))}
@@ -553,7 +642,7 @@ export const ElectionManagement = () => {
                       <label className="block text-xs mb-1">Admin/Authorized Private Key</label>
                       <input
                         type="password"
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                         placeholder="Enter private key"
                         value={addCandidateForm.privateKey}
                         onChange={(e) => setAddCandidateForm(prev => ({ ...prev, privateKey: e.target.value }))}
@@ -566,20 +655,20 @@ export const ElectionManagement = () => {
                     >
                       {addCandidateForm.loading ? 'Adding...' : 'Add Candidate to Election'}
                     </button>
-                    <p className="text-[10px] text-muted-foreground">Candidate must be registered and verified first. Max {selectedElection?.candidates ? selectedElection?.candidates.length : 0}/{selectedElection?.maxCandidates ?? 'N/A'} allowed.</p>
+                    <p className="text-[10px] text-gray-600">Candidate must be registered and verified first. Max {selectedElection?.candidates ? selectedElection?.candidates.length : 0}/{selectedElection?.maxCandidates ?? 'N/A'} allowed.</p>
                   </div>
                 </div>
               </div>
 
               {/* Status Controls: Open Registration / Set Timing */}
-              <div className="mt-6 p-4 border border-border rounded-lg">
+              <div className="mt-6 p-4 border border-gray-300 rounded-lg">
                 <h3 className="font-medium mb-3">Open Registration / Set Timing</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs mb-1">Title (optional)</label>
                       <input
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                         placeholder="Update election title"
                         value={timingForm.title}
                         onChange={(e) => setTimingForm(prev => ({ ...prev, title: e.target.value }))}
@@ -588,7 +677,7 @@ export const ElectionManagement = () => {
                     <div>
                       <label className="block text-xs mb-1">Description (optional)</label>
                       <textarea
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                         rows={2}
                         placeholder="Update election description"
                         value={timingForm.description}
@@ -603,7 +692,7 @@ export const ElectionManagement = () => {
                         <input
                           type="number"
                           min={1}
-                          className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                           value={timingForm.startInMinutes}
                           onChange={(e) => setTimingForm(prev => ({ ...prev, startInMinutes: Number(e.target.value) }))}
                         />
@@ -613,7 +702,7 @@ export const ElectionManagement = () => {
                         <input
                           type="number"
                           min={1}
-                          className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                           value={timingForm.durationMinutes}
                           onChange={(e) => setTimingForm(prev => ({ ...prev, durationMinutes: Number(e.target.value) }))}
                         />
@@ -623,7 +712,7 @@ export const ElectionManagement = () => {
                       <label className="block text-xs mb-1">Admin Private Key</label>
                       <input
                         type="password"
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                         placeholder="Enter your private key"
                         value={timingForm.privateKey}
                         onChange={(e) => setTimingForm(prev => ({ ...prev, privateKey: e.target.value }))}
@@ -636,7 +725,7 @@ export const ElectionManagement = () => {
                     >
                       {timingForm.loading ? 'Updating...' : 'Open Registration & Set Timing'}
                     </button>
-                    <p className="text-[10px] text-muted-foreground">This sets start/end on-chain and updates status to registration_open.</p>
+                    <p className="text-[10px] text-gray-600">This sets start/end on-chain and updates status to registration_open.</p>
                   </div>
                 </div>
               </div>
@@ -648,7 +737,7 @@ export const ElectionManagement = () => {
       {/* Emergency Stop Modal */}
       {emergencyStopForm.show && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-lg max-w-md w-full">
+          <div className="bg-white border border-gray-300 rounded-lg max-w-md w-full">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">Emergency Stop Election</h2>
               <div className="space-y-4">
@@ -657,7 +746,7 @@ export const ElectionManagement = () => {
                   <textarea
                     value={emergencyStopForm.reason}
                     onChange={(e) => setEmergencyStopForm(prev => ({ ...prev, reason: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
                     rows={3}
                     placeholder="Reason for emergency stop..."
                   />
@@ -668,7 +757,7 @@ export const ElectionManagement = () => {
                     type="password"
                     value={emergencyStopForm.privateKey}
                     onChange={(e) => setEmergencyStopForm(prev => ({ ...prev, privateKey: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
                     placeholder="Enter your private key..."
                   />
                 </div>
@@ -682,7 +771,7 @@ export const ElectionManagement = () => {
                   </button>
                   <button
                     onClick={() => setEmergencyStopForm({ show: false, reason: '', privateKey: '' })}
-                    className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-muted"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-200"
                   >
                     Cancel
                   </button>
@@ -696,7 +785,7 @@ export const ElectionManagement = () => {
       {/* Announce Results Modal */}
       {announceResultsForm.show && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-lg max-w-md w-full">
+          <div className="bg-white border border-gray-300 rounded-lg max-w-md w-full">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">Announce Results</h2>
               <div className="space-y-4">
@@ -706,7 +795,7 @@ export const ElectionManagement = () => {
                     type="password"
                     value={announceResultsForm.privateKey}
                     onChange={(e) => setAnnounceResultsForm(prev => ({ ...prev, privateKey: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
                     placeholder="Enter your private key..."
                   />
                 </div>
@@ -720,7 +809,61 @@ export const ElectionManagement = () => {
                   </button>
                   <button
                     onClick={() => setAnnounceResultsForm({ show: false, privateKey: '' })}
-                    className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-muted"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Change Modal */}
+      {statusChangeForm.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-gray-300 rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Change Election Status</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Current Status: <span className="font-medium capitalize">{selectedElection?.status.replace('_', ' ')}</span>
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">New Status</label>
+                  <select
+                    value={statusChangeForm.newStatus}
+                    onChange={(e) => setStatusChangeForm(prev => ({ ...prev, newStatus: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                  >
+                    <option value="">Select new status...</option>
+                    <option value="created">Created</option>
+                    <option value="registration_open">Registration Open</option>
+                    <option value="registration_closed">Registration Closed</option>
+                    <option value="voting_active">Voting Active</option>
+                    <option value="voting_ended">Voting Ended</option>
+                    <option value="results_announced">Results Announced</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-xs text-yellow-800">
+                    <strong>Warning:</strong> Changing election status directly bypasses blockchain validation. 
+                    Use with caution and ensure the new status reflects the actual election state.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleStatusChange}
+                    disabled={statusChangeForm.loading || !statusChangeForm.newStatus}
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {statusChangeForm.loading ? 'Updating...' : 'Update Status'}
+                  </button>
+                  <button
+                    onClick={() => setStatusChangeForm({ show: false, newStatus: '', loading: false })}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-200"
                   >
                     Cancel
                   </button>
