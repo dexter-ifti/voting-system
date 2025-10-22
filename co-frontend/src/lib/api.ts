@@ -30,3 +30,39 @@ api.interceptors.response.use(
 );
 
 export interface ApiResponse<T> { success: boolean; message?: string; data?: T; error?: string; }
+
+// Election Registration API functions
+export const registerCandidateForElection = async (data: {
+  contractAddress: string;
+  walletAddress: string;
+  privateKey: string;
+}): Promise<ApiResponse<any>> => {
+  const response = await api.post('/candidate/register-election', data);
+  return response.data;
+};
+
+export const registerVoterForElection = async (data: {
+  contractAddress: string;
+  walletAddress: string;
+  privateKey: string;
+}): Promise<ApiResponse<any>> => {
+  const response = await api.post('/voter/register-election', data);
+  return response.data;
+};
+
+// Get election results
+export const getElectionResults = async (contractAddress: string): Promise<ApiResponse<any>> => {
+  const response = await api.get(`/election/${contractAddress}/results`);
+  return response.data;
+};
+
+// Update election status
+export const updateElectionStatus = async (data: {
+  contractAddress: string;
+  status: string;
+}): Promise<ApiResponse<any>> => {
+  const response = await api.patch(`/election/${data.contractAddress}/status`, {
+    status: data.status
+  });
+  return response.data;
+};
