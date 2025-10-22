@@ -17,6 +17,7 @@ import { ElectionDetailsPage } from './pages/elections/ElectionDetailsPage';
 import { ElectionRegistrationPage } from './pages/elections/ElectionRegistrationPage';
 import { CreateElectionPage } from './pages/elections/CreateElectionPage';
 import { useAuthStore } from './stores/authStore';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
 
 const Protected = ({ children, roles }: { children: JSX.Element; roles?: string[] }) => {
   const user = useAuthStore(s => s.user);
@@ -44,6 +45,7 @@ export default function App() {
     <Suspense fallback={<div className="p-8">Loading...</div>}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path='/test' element={<AdminDashboard />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/admin/register" element={<AdminRegisterPage />} />
         <Route path="/voter/register" element={<VoterRegisterPage />} />
