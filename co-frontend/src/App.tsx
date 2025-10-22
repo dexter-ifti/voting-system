@@ -14,6 +14,7 @@ import { VoterDashboard } from './pages/voter/VoterDashboard';
 import { ElectionCandidatesView } from './pages/candidate/ElectionCandidatesView';
 import { ElectionsListPage } from './pages/elections/ElectionsListPage';
 import { ElectionDetailsPage } from './pages/elections/ElectionDetailsPage';
+import { ElectionRegistrationPage } from './pages/elections/ElectionRegistrationPage';
 import { CreateElectionPage } from './pages/elections/CreateElectionPage';
 import { useAuthStore } from './stores/authStore';
 
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/elections" element={<ElectionsListPage />} />
           <Route path="/elections/create" element={<Protected roles={["super_admin","election_admin"]}><CreateElectionPage /></Protected>} />
           <Route path="/elections/:contractAddress" element={<ElectionDetailsPage />} />
+          <Route path="/elections/:contractAddress/register" element={<Protected><ElectionRegistrationPage /></Protected>} />
           <Route path="/elections/:contractAddress/candidates" element={<ElectionCandidatesView />} />
         </Route>
       </Routes>
