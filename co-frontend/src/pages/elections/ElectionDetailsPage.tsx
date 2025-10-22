@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { ethers } from 'ethers';
+import { VotingInterface } from '../../components/VotingInterface';
 import { toast } from 'sonner';
 
 interface Candidate {
@@ -18,7 +18,7 @@ export const ElectionDetailsPage = () => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const user = useAuthStore(s => s.user);
-  const [voteLoading, setVoteLoading] = useState(false);
+  const [showVoting, setShowVoting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -37,30 +37,10 @@ export const ElectionDetailsPage = () => {
 
   useEffect(() => { load(); }, [contractAddress]);
 
-  const castVote = async (candidateId: number) => {
-    if (!user || user.role !== 'voter') return toast.error('Login as voter');
-    setVoteLoading(true);
-    try {
-      if (!(window as any).ethereum) throw new Error('MetaMask not found');
-      const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const accounts = await provider.send('eth_requestAccounts', []);
-      const address = accounts[0];
-      if (address.toLowerCase() !== user.walletAddress?.toLowerCase()) {
-        return toast.error('Connected wallet mismatch');
-      }
-      // For simplicity, request private key (NOT recommended in prod). Better flow: backend uses signature to authorize server-side key mgmt.
-      const pk = prompt('Enter private key to sign vote (demo only, never share real key):');
-      if (!pk) return;
-      const { data: voteRes } = await api.post('/voter/vote', { contractAddress, candidateId, privateKey: pk });
-      if (voteRes.success) {
-        toast.success('Vote cast');
-        load();
-      }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message || 'Vote failed');
-    } finally {
-      setVoteLoading(false);
-    }
+  const handleVoteSuccess = () => {
+    toast.success('Vote cast successfully!');
+    setShowVoting(false);
+    load(); // Reload data to show updated vote counts
   };
 
   if (loading) return <div className="p-8 text-sm text-slate-400">Loading...</div>;
@@ -92,6 +72,27 @@ export const ElectionDetailsPage = () => {
             <span>Votes: {election.totalVotesCast}</span>
           </div>
         </div>
+        
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {user && election.status === 'registration_open' && (
+            <Link
+              to={`/elections/${contractAddress}/register`}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+            >
+              Register for Election
+            </Link>
+          )}
+          
+          {election.status === 'voting_active' && user?.role === 'voter' && (
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              onClick={() => setShowVoting(true)}
+            >
+              Cast Your Vote
+            </button>
+          )}
+        </div>
       </div>
 
       <div>
@@ -106,13 +107,36 @@ export const ElectionDetailsPage = () => {
               <p className="text-xs text-slate-400">{c.party}</p>
               <p className="text-xs text-slate-500 line-clamp-3">{c.manifesto}</p>
               <p className="text-xs text-slate-400">Votes: {c.votes}</p>
-              {user?.role === 'voter' && (
-                <button disabled={voteLoading} onClick={()=>castVote(c.candidateId)} className="text-xs mt-1 bg-primary/80 hover:bg-primary px-3 py-1.5 rounded disabled:opacity-50">Vote</button>
-              )}
             </div>
           ))}
         </div>
       </div>
+
+      {/* Voting Interface Modal */}
+      {showVoting && user?.role === 'voter' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-card border border-border rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Cast Your Vote</h2>
+                <button
+                  onClick={() => setShowVoting(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <VotingInterface
+                contractAddress={contractAddress || ''}
+                candidates={candidates}
+                userWalletAddress={user.walletAddress || ''}
+                onVoteSuccess={handleVoteSuccess}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
