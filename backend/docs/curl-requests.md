@@ -110,6 +110,32 @@ curl -X GET "$BASE_URL/api/admin/elections/<CONTRACT_ADDRESS>/analytics" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+### How to Manage Election Status in Future
+### For Admins:
+# Update specific election status
+```
+curl -X PATCH "http://localhost:5001/api/election/CONTRACT_ADDRESS/status" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "registration_open"}'
+```
+# Batch update all created elections
+``` 
+curl -X POST "http://localhost:5001/api/election/fix-status"
+```
+
+### Example to set election status to 'voting_active'
+```
+curl -X PATCH "http://localhost:5001/api/election/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512/status" -H "Content-Type: application/json" -d '{"status": "voting_active"}'
+```
+
+### Fix Candidate IDs for an Election
+```
+curl -X POST "http://localhost:5001/api/election/0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e/fix-candidate-ids" \
+  -H "Content-Type: application/json" \
+  -s | jq
+
+```
+
 ---
 ## Voter Endpoints (/api/voter)
 
