@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../lib/api';
+import { api, registerVoterForElection } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 import { useNavigate } from 'react-router-dom';
 import { VoterAnalytics } from './VoterAnalytics';
+import { ElectionResults } from '../../components/ElectionResults';
 
 interface VoterElection {
   electionId: {
@@ -60,11 +61,12 @@ export const VoterDashboard = () => {
   const [voterElections, setVoterElections] = useState<VoterElection[]>([]);
   const [availableElections, setAvailableElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'profile' | 'elections' | 'vote' | 'register' | 'analytics'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'profile' | 'elections' | 'vote' | 'register' | 'analytics' | 'results'>('dashboard');
   const [registering, setRegistering] = useState('');
   const [voting, setVoting] = useState('');
   const [selectedElection, setSelectedElection] = useState<Election | null>(null);
   const [privateKey, setPrivateKey] = useState('');
+  const [selectedResultsContractAddress, setSelectedResultsContractAddress] = useState<string>('');
 
   const loadProfile = async () => {
     if (!user?.walletAddress) return;
@@ -83,13 +85,16 @@ export const VoterDashboard = () => {
     if (!user?.walletAddress) return;
 
     try {
+      console.log('Loading voter elections for wallet:', user.walletAddress);
       const { data } = await api.get(`/voter/${user.walletAddress}/elections`);
+      console.log('Raw voter elections response:', data);
       if (data.success) {
         console.log('Loaded voter elections:', data.data.elections);
         // Filter out any elections with malformed data
         const validElections = data.data.elections.filter((election: any) => 
           election && election.electionId && election.electionId._id
         );
+        console.log('Valid voter elections after filtering:', validElections);
         setVoterElections(validElections);
       }
     } catch (error) {
@@ -121,17 +126,19 @@ export const VoterDashboard = () => {
 
     setRegistering(contractAddress);
     try {
-      const { data } = await api.post('/voter/register-election', {
+      const result = await registerVoterForElection({
         contractAddress,
-        walletAddress: user?.walletAddress,
+        walletAddress: user?.walletAddress || '',
         privateKey: privateKey.trim()
       });
 
-      if (data.success) {
+      if (result.success) {
         alert('Successfully registered for election!');
         setPrivateKey('');
         await loadVoterElections();
         await loadAvailableElections();
+      } else {
+        alert(result.message || 'Failed to register for election');
       }
     } catch (error: any) {
       alert(error.response?.data?.message || 'Failed to register for election');
@@ -436,7 +443,7 @@ export const VoterDashboard = () => {
         {/* Active Elections for Voting */}
         <div className="space-y-4">
           {voterElections
-            .filter(e => e.electionId && e.electionId.status === 'voting_active' && !e.hasVoted)
+            .filter(e => e.electionId && e.electionId.status && ['voting_active', 'registration_open'].includes(e.electionId.status) && !e.hasVoted)
             .map((election) => (
               <div key={election.electionId._id} className="border border-border rounded-lg p-4">
                 <div className="flex justify-between items-start mb-4">
@@ -446,8 +453,12 @@ export const VoterDashboard = () => {
                       {election.electionId.electionType || 'Unknown Type'} Election
                     </p>
                   </div>
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                    Voting Active
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    election.electionId.status === 'voting_active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {election.electionId.status === 'voting_active' ? 'Voting Active' : 'Registered'}
                   </span>
                 </div>
                 
@@ -467,20 +478,88 @@ export const VoterDashboard = () => {
                       maxCandidates: 0
                     });
                   }}
-                  className="w-full bg-primary text-primary-foreground py-2 rounded-lg hover:bg-primary/90"
+                  disabled={election.electionId.status !== 'voting_active'}
+                  className={`w-full py-2 rounded-lg transition-colors ${
+                    election.electionId.status === 'voting_active'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'bg-muted text-muted-foreground cursor-not-allowed'
+                  }`}
                 >
-                  Vote in this Election
+                  {election.electionId.status === 'voting_active' 
+                    ? 'Vote in this Election' 
+                    : 'Voting Not Started'}
                 </button>
               </div>
             ))}
         </div>
 
-        {voterElections.filter(e => e.electionId && e.electionId.status === 'voting_active' && !e.hasVoted).length === 0 && (
+        {voterElections.filter(e => e.electionId && e.electionId.status && ['voting_active', 'registration_open'].includes(e.electionId.status) && !e.hasVoted).length === 0 && (
           <div className="text-center py-8">
             <div className="text-4xl mb-4">✅</div>
             <h3 className="text-lg font-medium mb-2">No Active Voting</h3>
+            <p className="text-muted-foreground mb-4">
+              {voterElections.length === 0 
+                ? "You haven't registered for any elections yet."
+                : voterElections.every(e => e.hasVoted)
+                ? "You have voted in all your registered elections. Thank you for participating!"
+                : "No elections are currently accepting votes."
+              }
+            </p>
+            {voterElections.length === 0 && (
+              <button
+                onClick={() => setCurrentView('register')}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+              >
+                Register for Elections
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Elections with Results Available */}
+      <div className="bg-card border border-border rounded-lg p-6">
+        <h3 className="font-semibold text-lg mb-4">📊 View Election Results</h3>
+        
+        <div className="space-y-4">
+          {voterElections
+            .filter(e => e.electionId && e.electionId.status === 'results_announced')
+            .map((election) => (
+              <div key={election.electionId._id} className="border border-border rounded-lg p-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h4 className="font-medium">{election.electionId.title || 'Untitled Election'}</h4>
+                    <p className="text-sm text-muted-foreground capitalize">
+                      {election.electionId.electionType || 'Unknown Type'} Election
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      {election.hasVoted ? '✅ You voted in this election' : '⚠️ You did not vote in this election'}
+                    </p>
+                  </div>
+                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800">
+                    Results Announced
+                  </span>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    setSelectedResultsContractAddress(election.electionId.contractAddress);
+                    setCurrentView('results');
+                  }}
+                  className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  View Results
+                </button>
+              </div>
+            ))}
+        </div>
+
+        {voterElections.filter(e => e.electionId && e.electionId.status === 'results_announced').length === 0 && (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4">📊</div>
+            <h3 className="text-lg font-medium mb-2">No Results Available</h3>
             <p className="text-muted-foreground">
-              No elections are currently accepting votes, or you've already voted in all active elections.
+              Results will appear here when elections you participated in have been completed and results announced.
             </p>
           </div>
         )}
@@ -574,6 +653,26 @@ export const VoterDashboard = () => {
         return renderRegistration();
       case 'analytics':
         return <VoterAnalytics />;
+      case 'results':
+        return selectedResultsContractAddress ? (
+          <ElectionResults 
+            contractAddress={selectedResultsContractAddress}
+            onClose={() => {
+              setCurrentView('dashboard');
+              setSelectedResultsContractAddress('');
+            }}
+          />
+        ) : (
+          <div className="text-center p-8">
+            <p className="text-muted-foreground">No election selected for results viewing.</p>
+            <button 
+              onClick={() => setCurrentView('dashboard')}
+              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        );
       default:
         return renderDashboard();
     }
@@ -667,6 +766,16 @@ export const VoterDashboard = () => {
                   }`}
                 >
                   Register for Elections
+                </button>
+                <button
+                  onClick={() => setCurrentView('results')}
+                  className={`py-4 text-sm font-medium border-b-2 transition-colors ${
+                    currentView === 'results'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Results
                 </button>
               </>
             )}
