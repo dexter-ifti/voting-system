@@ -50,58 +50,194 @@ export const SystemStatus = () => {
   }, []);
 
   if (loading) {
-    return <div className="text-center py-4 text-slate-400">Loading system status...</div>;
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-transparent bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-padding mx-auto"></div>
+            <div className="absolute inset-0 animate-spin rounded-full h-16 w-16 border-4 border-transparent bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-border opacity-20"></div>
+          </div>
+          <p className="text-slate-300 font-medium mt-4 animate-pulse">Loading system status...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!stats) {
-    return <div className="text-center py-4 text-red-400">Failed to load system status</div>;
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-20 h-20 bg-red-500/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-10 h-10 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <p className="text-red-400 font-medium">Failed to load system status</p>
+          <button 
+            onClick={loadSystemStats}
+            className="mt-4 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-2xl hover:scale-105 transition-all duration-300 font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-medium mb-3">System Overview</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-muted/50 p-4 rounded-lg">
-            <div className="text-2xl font-semibold text-blue-600">{stats.dashboard.stats.totalElections}</div>
-            <div className="text-sm text-muted-foreground">Total Elections</div>
-          </div>
-          <div className="bg-muted/50 p-4 rounded-lg">
-            <div className="text-2xl font-semibold text-green-600">{stats.dashboard.stats.activeElections}</div>
-            <div className="text-sm text-muted-foreground">Active Elections</div>
-          </div>
-          <div className="bg-muted/50 p-4 rounded-lg">
-            <div className="text-2xl font-semibold text-purple-600">{stats.dashboard.stats.totalVoters}</div>
-            <div className="text-sm text-muted-foreground">Verified Voters</div>
-          </div>
-          <div className="bg-muted/50 p-4 rounded-lg">
-            <div className="text-2xl font-semibold text-orange-600">{stats.dashboard.stats.totalCandidates}</div>
-            <div className="text-sm text-muted-foreground">Verified Candidates</div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-950 relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-4 -left-4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        <div className="absolute -top-4 -right-4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-4000"></div>
       </div>
 
-      <div>
-        <h3 className="font-medium mb-3">Blockchain Status</h3>
-        <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Network:</span>
-            <span className="font-medium capitalize">{stats.blockchain.network}</span>
+      <div className="relative z-10 max-w-7xl mx-auto py-12 px-8 space-y-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">
+            System Status
+          </h1>
+          <p className="text-slate-400 text-lg">Monitor your voting system's health and performance</p>
+        </div>
+
+        {/* System Overview */}
+        <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl p-8">
+          <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+            <svg className="w-8 h-8 mr-3 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            System Overview
+          </h2>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-white/5 hover:border-purple-400/30 transition-all duration-300 hover:scale-105">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">{stats.dashboard.stats.totalElections.toLocaleString()}</div>
+                  <div className="text-sm text-slate-400">Total Elections</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-white/5 hover:border-emerald-400/30 transition-all duration-300 hover:scale-105">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl flex items-center justify-center animate-pulse">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">{stats.dashboard.stats.activeElections.toLocaleString()}</div>
+                  <div className="text-sm text-slate-400">Active Elections</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-white/5 hover:border-blue-400/30 transition-all duration-300 hover:scale-105">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM9 16a2 2 0 100-4 2 2 0 000 4zM7 16a4 4 0 118 0v1H7v-1z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">{stats.dashboard.stats.totalVoters.toLocaleString()}</div>
+                  <div className="text-sm text-slate-400">Verified Voters</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-white/5 hover:border-amber-400/30 transition-all duration-300 hover:scale-105">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">{stats.dashboard.stats.totalCandidates.toLocaleString()}</div>
+                  <div className="text-sm text-slate-400">Verified Candidates</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Current Block:</span>
-            <span className="font-medium font-mono">#{stats.blockchain.currentBlockNumber}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">RPC URL:</span>
-            <span className="font-mono text-xs">{stats.blockchain.rpcUrl}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Status:</span>
-            <span className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-green-600 font-medium">Connected</span>
-            </span>
+        </div>
+
+        {/* Blockchain Status */}
+        <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl p-8">
+          <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+            <svg className="w-8 h-8 mr-3 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            </svg>
+            Blockchain Status
+          </h2>
+          
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-white/10 p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-slate-300 font-medium">Network:</span>
+              </div>
+              <span className="bg-blue-500/20 backdrop-blur-sm px-4 py-2 rounded-xl border border-blue-400/30 text-blue-300 font-semibold capitalize">
+                {stats.blockchain.network}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-slate-300 font-medium">Current Block:</span>
+              </div>
+              <span className="bg-purple-500/20 backdrop-blur-sm px-4 py-2 rounded-xl border border-purple-400/30 text-purple-300 font-mono font-semibold">
+                #{stats.blockchain.currentBlockNumber.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-cyan-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-slate-300 font-medium">RPC URL:</span>
+              </div>
+              <span className="bg-slate-700/50 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10 text-slate-300 font-mono text-sm break-all">
+                {stats.blockchain.rpcUrl}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl flex items-center justify-center animate-pulse">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-slate-300 font-medium">Connection Status:</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-green-400 font-semibold">Connected</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
