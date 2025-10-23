@@ -2,16 +2,173 @@ import { useState } from 'react';
 import { api } from '../../lib/api';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { AadharOTPVerification } from '../../components/AadharOTPVerification';
+import { DemoOTPDisplay } from '../../components/DemoOTPDisplay';
+import { validateAadhar, sendOTP, formatAadharNumber, isValidAadharFormat, getCleanAadhar } from '../../lib/aadharApi';
 
 export const VoterRegisterPage = () => {
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: '', age: 18, gender:'NotSpecified', walletAddress:'', email:'', phone:'' });
+  const [form, setForm] = useState({ 
+    name: '', 
+    age: 18, 
+    gender:'NotSpecified', 
+    walletAddress:'', 
+    email:'', 
+    phone:'',
+    aadharNumber: ''
+  });
+
+  // Aadhar verification states
+  const [aadharStep, setAadharStep] = useState<'input' | 'verifying' | 'verified'>('input');
+  const [aadharValidating, setAadharValidating] = useState(false);
+  const [aadharError, setAadharError] = useState('');
+  const [verifiedAadharData, setVerifiedAadharData] = useState<{ aadharNumber: string; email: string } | null>(null);
+  
+  // OTP verification states
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otpData, setOtpData] = useState<{ otpKey: string; email: string; aadharNumber: string } | null>(null);
+  const [resendingOTP, setResendingOTP] = useState(false);
+  
+  // Demo OTP display state
+  const [demoOTPData, setDemoOTPData] = useState<{ otp: string; email: string; aadharNumber: string } | null>(null);
+
+  // Handle Aadhar input change with formatting
+  const handleAadharChange = (value: string) => {
+    const formatted = formatAadharNumber(value);
+    setForm(f => ({ ...f, aadharNumber: formatted }));
+    setAadharError('');
+    if (aadharStep === 'verified') {
+      setAadharStep('input');
+      setVerifiedAadharData(null);
+    }
+  };
+
+  // Validate and verify Aadhar
+  const handleAadharValidation = async () => {
+    const cleanAadhar = getCleanAadhar(form.aadharNumber);
+    
+    if (!isValidAadharFormat(cleanAadhar)) {
+      setAadharError('Please enter a valid 12-digit Aadhar number');
+      return;
+    }
+
+    setAadharValidating(true);
+    setAadharError('');
+
+    try {
+      // Step 1: Validate Aadhar exists
+      const validateResponse = await validateAadhar(cleanAadhar);
+      
+      if (!validateResponse.success || !validateResponse.data) {
+        setAadharError(validateResponse.message || 'Aadhar number not found in our records');
+        return;
+      }
+
+      // Step 2: Send OTP
+      const otpResponse = await sendOTP(cleanAadhar);
+      
+      if (!otpResponse.success || !otpResponse.data) {
+        setAadharError(otpResponse.message || 'Failed to send OTP');
+        return;
+      }
+
+      // Show OTP modal
+      setOtpData({
+        otpKey: otpResponse.data.otpKey,
+        email: validateResponse.data.email,
+        aadharNumber: cleanAadhar
+      });
+      setShowOTPModal(true);
+      setAadharStep('verifying');
+
+      // For demo: show OTP in floating component if available in response
+      if (otpResponse.data.otp) {
+        setDemoOTPData({
+          otp: otpResponse.data.otp,
+          email: validateResponse.data.email,
+          aadharNumber: cleanAadhar
+        });
+        
+        // Auto-hide demo OTP after 30 seconds or when modal closes
+        setTimeout(() => {
+          setDemoOTPData(null);
+        }, 30000);
+      }
+
+      toast.success(`OTP sent to ${validateResponse.data.email}`);
+      
+    } catch (error: any) {
+      setAadharError(error.response?.data?.message || 'Aadhar validation failed');
+    } finally {
+      setAadharValidating(false);
+    }
+  };
+
+  // Handle OTP verification success
+  const handleOTPVerificationSuccess = (data: { aadharNumber: string; email: string }) => {
+    setVerifiedAadharData(data);
+    setAadharStep('verified');
+    setShowOTPModal(false);
+    setOtpData(null);
+    setDemoOTPData(null); // Hide demo OTP on success
+    
+    // Pre-fill email if not already filled
+    if (!form.email) {
+      setForm(f => ({ ...f, email: data.email }));
+    }
+    
+    toast.success('Aadhar verified successfully!');
+  };
+
+  // Handle OTP modal cancel
+  const handleOTPCancel = () => {
+    setShowOTPModal(false);
+    setOtpData(null);
+    setDemoOTPData(null); // Hide demo OTP on cancel
+    setAadharStep('input');
+  };
+
+  // Handle OTP resend
+  const handleOTPResend = async () => {
+    if (!otpData) return;
+
+    setResendingOTP(true);
+    try {
+      const otpResponse = await sendOTP(otpData.aadharNumber);
+      
+      if (otpResponse.success && otpResponse.data) {
+        setOtpData(prev => prev ? {
+          ...prev,
+          otpKey: otpResponse.data!.otpKey
+        } : null);
+        toast.success('New OTP sent successfully!');
+      } else {
+        toast.error(otpResponse.message || 'Failed to resend OTP');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to resend OTP');
+    } finally {
+      setResendingOTP(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if Aadhar is verified
+    if (aadharStep !== 'verified' || !verifiedAadharData) {
+      toast.error('Please verify your Aadhar number first');
+      return;
+    }
+    
     setLoading(true);
     try {
-      const { data } = await api.post('/voter/register', form);
+      const formData = {
+        ...form,
+        aadharNumber: verifiedAadharData.aadharNumber
+      };
+      
+      const { data } = await api.post('/voter/register', formData);
       if (data.success) {
         toast.success('Registered, pending verification');
       }
@@ -54,6 +211,88 @@ export const VoterRegisterPage = () => {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
                   <span className="w-6 h-6 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-full flex items-center justify-center text-xs">1</span>
+                  <span>Identity Verification</span>
+                </h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Aadhar Number
+                  </label>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <input 
+                        value={form.aadharNumber} 
+                        onChange={e => handleAadharChange(e.target.value)}
+                        required 
+                        placeholder="1234 5678 9012"
+                        maxLength={14} // 12 digits + 2 spaces
+                        className={`w-full px-4 py-3 bg-slate-900/50 border rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:outline-none transition-all duration-300 hover:border-slate-500/50 font-mono ${
+                          aadharError 
+                            ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' 
+                            : aadharStep === 'verified'
+                            ? 'border-emerald-500/50 focus:border-emerald-500 focus:ring-emerald-500/20'
+                            : 'border-slate-600/50 focus:border-cyan-500/50 focus:ring-cyan-500/20'
+                        }`}
+                        disabled={aadharStep === 'verified'}
+                      />
+                      {aadharStep === 'verified' && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <span className="text-emerald-400 text-xl">✓</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {aadharError && (
+                      <p className="text-red-400 text-sm flex items-center">
+                        <span className="mr-1">⚠️</span>
+                        {aadharError}
+                      </p>
+                    )}
+                    
+                    {aadharStep === 'verified' && verifiedAadharData && (
+                      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+                        <p className="text-emerald-300 text-sm flex items-center">
+                          <span className="mr-2">✅</span>
+                          Aadhar verified with email: {verifiedAadharData.email}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <button
+                      type="button"
+                      onClick={handleAadharValidation}
+                      disabled={!form.aadharNumber || aadharValidating || aadharStep === 'verified'}
+                      className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        aadharStep === 'verified'
+                          ? 'bg-emerald-600/20 border border-emerald-500/30 text-emerald-300 cursor-default'
+                          : 'bg-cyan-600/20 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-600/30 hover:border-cyan-500/50'
+                      }`}
+                    >
+                      {aadharValidating ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-5 h-5 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin"></div>
+                          <span>Validating Aadhar...</span>
+                        </div>
+                      ) : aadharStep === 'verified' ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <span>✅</span>
+                          <span>Aadhar Verified</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center space-x-2">
+                          <span>🔍</span>
+                          <span>Verify Aadhar</span>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
+                  <span className="w-6 h-6 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full flex items-center justify-center text-xs">2</span>
                   <span>Personal Information</span>
                 </h3>
                 
@@ -107,7 +346,7 @@ export const VoterRegisterPage = () => {
               {/* Blockchain Section */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-                  <span className="w-6 h-6 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full flex items-center justify-center text-xs">2</span>
+                  <span className="w-6 h-6 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-xs">3</span>
                   <span>Blockchain Identity</span>
                 </h3>
                 
@@ -131,7 +370,7 @@ export const VoterRegisterPage = () => {
               {/* Contact Information Section */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-                  <span className="w-6 h-6 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-xs">3</span>
+                  <span className="w-6 h-6 bg-gradient-to-br from-cyan-500 to-purple-500 rounded-full flex items-center justify-center text-xs">4</span>
                   <span>Contact Details (Optional)</span>
                 </h3>
                 
@@ -163,7 +402,7 @@ export const VoterRegisterPage = () => {
               </div>
 
               <button 
-                disabled={loading} 
+                disabled={loading || aadharStep !== 'verified'} 
                 className="w-full relative overflow-hidden bg-gradient-to-r from-cyan-600 to-emerald-600 text-white py-4 px-6 rounded-xl font-semibold shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group"
               >
                 <span className="relative z-10">
@@ -171,6 +410,11 @@ export const VoterRegisterPage = () => {
                     <div className="flex items-center justify-center space-x-3">
                       <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       <span>Submitting registration...</span>
+                    </div>
+                  ) : aadharStep !== 'verified' ? (
+                    <div className="flex items-center justify-center space-x-3">
+                      <span className="text-xl">🔒</span>
+                      <span>Complete Aadhar Verification First</span>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center space-x-3">
@@ -205,6 +449,28 @@ export const VoterRegisterPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Demo OTP Display for live demonstrations */}
+      {demoOTPData && (
+        <DemoOTPDisplay
+          otpData={demoOTPData}
+          onClose={() => setDemoOTPData(null)}
+        />
+      )}
+
+      {/* OTP Verification Modal */}
+      {showOTPModal && otpData && (
+        <AadharOTPVerification
+          aadharNumber={otpData.aadharNumber}
+          email={otpData.email}
+          otpKey={otpData.otpKey}
+          onVerificationSuccess={handleOTPVerificationSuccess}
+          onCancel={handleOTPCancel}
+          onResendOTP={handleOTPResend}
+          loading={loading}
+          resending={resendingOTP}
+        />
+      )}
     </div>
   );
 };
