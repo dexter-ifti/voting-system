@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aadhar Duplicate Prevention Demo</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: #1e293b;
+            color: white;
+        }
+        .demo-section {
+            background: #334155;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #cbd5e1;
+        }
+        input, textarea {
+            background: #1e293b;
+            color: white;
+            border: 1px solid #475569;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 300px;
+        }
+        button {
+            background: #06b6d4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: bold;
+        }
+        button:hover { background: #0891b2; }
+        button:disabled { 
+            background: #64748b; 
+            cursor: not-allowed; 
+        }
+        .result {
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { border-left: 4px solid #10b981; }
+        .error { border-left: 4px solid #ef4444; }
+        .info { border-left: 4px solid #06b6d4; }
+        .warning { border-left: 4px solid #f59e0b; }
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .scenario {
+            background: #475569;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .scenario h4 {
+            margin: 0 0 10px 0;
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔒 Aadhar Duplicate Prevention Demo</h1>
+    <p>This demo shows how the system prevents duplicate registrations using Aadhar numbers.</p>
+
+    <div class="demo-section">
+        <h2>🎯 Live Test Scenarios</h2>
+        <div class="test-grid">
+            <!-- Voter Registration -->
+            <div>
+                <h3>👤 Voter Registration</h3>
+                <div class="form-group">
+                    <label>Name:</label>
+                    <input type="text" id="voter-name" placeholder="John Doe" value="Test Voter">
+                </div>
+                <div class="form-group">
+                    <label>Age:</label>
+                    <input type="number" id="voter-age" placeholder="25" value="25" min="18">
+                </div>
+                <div class="form-group">
+                    <label>Wallet Address:</label>
+                    <input type="text" id="voter-wallet" placeholder="0x..." value="0x1234567890123456789012345678901234567890">
+                </div>
+                <div class="form-group">
+                    <label>Aadhar Number:</label>
+                    <input type="text" id="voter-aadhar" placeholder="1234 5678 9012" maxlength="14">
+                </div>
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="voter-email" placeholder="test@example.com">
+                </div>
+                <button onclick="registerVoter()">Register Voter</button>
+            </div>
+
+            <!-- Candidate Registration -->
+            <div>
+                <h3>🏛️ Candidate Registration</h3>
+                <div class="form-group">
+                    <label>Name:</label>
+                    <input type="text" id="candidate-name" placeholder="Jane Smith" value="Test Candidate">
+                </div>
+                <div class="form-group">
+                    <label>Party:</label>
+                    <input type="text" id="candidate-party" placeholder="Test Party" value="Demo Party">
+                </div>
+                <div class="form-group">
+                    <label>Manifesto:</label>
+                    <textarea id="candidate-manifesto" placeholder="My promises..." rows="3">I promise to serve the people with integrity and transparency.</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Age:</label>
+                    <input type="number" id="candidate-age" placeholder="35" value="35" min="18">
+                </div>
+                <div class="form-group">
+                    <label>Wallet Address:</label>
+                    <input type="text" id="candidate-wallet" placeholder="0x..." value="0x0987654321098765432109876543210987654321">
+                </div>
+                <div class="form-group">
+                    <label>Aadhar Number:</label>
+                    <input type="text" id="candidate-aadhar" placeholder="1234 5678 9012" maxlength="14">
+                </div>
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="candidate-email" placeholder="test@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Phone:</label>
+                    <input type="tel" id="candidate-phone" placeholder="+1234567890" value="+1987654321">
+                </div>
+                <button onclick="registerCandidate()">Register Candidate</button>
+            </div>
+        </div>
+
+        <div id="registration-result" class="result info">
+            Ready to test duplicate prevention...
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>📋 Test Scenarios</h2>
+        <div class="scenario">
+            <h4>✅ Scenario 1: Valid First Registration</h4>
+            <p>Use any test Aadhar (e.g., 123456789012) with matching email. Should succeed.</p>
+            <button onclick="quickTest('123456789012', 'tiftikhar@student.iul.ac.in', 'voter')">Test Valid Voter</button>
+        </div>
+
+        <div class="scenario">
+            <h4>❌ Scenario 2: Duplicate Registration</h4>
+            <p>Try to register the same Aadhar twice. Second attempt should fail.</p>
+            <button onclick="quickTest('111111111111', 'voter1@demo.com', 'duplicate')">Test Duplicate</button>
+        </div>
+
+        <div class="scenario">
+            <h4>❌ Scenario 3: Cross-Registration</h4>
+            <p>Register as voter, then try to register as candidate with same Aadhar. Should fail.</p>
+            <button onclick="quickTest('222222222222', 'voter2@demo.com', 'cross')">Test Cross-Registration</button>
+        </div>
+
+        <div class="scenario">
+            <h4>❌ Scenario 4: Invalid Aadhar</h4>
+            <p>Use non-existent Aadhar number. Should fail validation.</p>
+            <button onclick="quickTest('999999999999', 'invalid@test.com', 'voter')">Test Invalid Aadhar</button>
+        </div>
+
+        <div class="scenario">
+            <h4>❌ Scenario 5: Email Mismatch</h4>
+            <p>Use valid Aadhar with wrong email. Should fail validation.</p>
+            <button onclick="quickTest('333333333333', 'wrong@email.com', 'voter')">Test Email Mismatch</button>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>📊 Available Test Data</h2>
+        <div class="info result">
+Test Aadhar Numbers (with associated emails):
+
+123456789012 → tiftikhar@student.iul.ac.in
+234567890123 → john.doe@example.com
+345678901234 → jane.smith@example.com
+111111111111 → voter1@demo.com
+222222222222 → voter2@demo.com
+333333333333 → candidate1@demo.com
+444444444444 → candidate2@demo.com
+555555555555 → admin@demo.com
+
+Note: Use matching email addresses for valid tests.
+        </div>
+    </div>
+
+    <script>
+        // Auto-format Aadhar inputs
+        ['voter-aadhar', 'candidate-aadhar'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function(e) {
+                const value = e.target.value.replace(/\D/g, '');
+                const formatted = value.substring(0, 12).replace(/(\d{4})(?=\d)/g, '$1 ');
+                e.target.value = formatted;
+            });
+        });
+
+        async function registerVoter() {
+            const data = {
+                name: document.getElementById('voter-name').value,
+                age: parseInt(document.getElementById('voter-age').value),
+                gender: 'NotSpecified',
+                walletAddress: document.getElementById('voter-wallet').value,
+                aadharNumber: document.getElementById('voter-aadhar').value.replace(/\s/g, ''),
+                email: document.getElementById('voter-email').value
+            };
+
+            await testRegistration('/api/voter/register', data, 'Voter');
+        }
+
+        async function registerCandidate() {
+            const data = {
+                name: document.getElementById('candidate-name').value,
+                party: document.getElementById('candidate-party').value,
+                manifesto: document.getElementById('candidate-manifesto').value,
+                age: parseInt(document.getElementById('candidate-age').value),
+                gender: 'NotSpecified',
+                walletAddress: document.getElementById('candidate-wallet').value,
+                aadharNumber: document.getElementById('candidate-aadhar').value.replace(/\s/g, ''),
+                email: document.getElementById('candidate-email').value,
+                phone: document.getElementById('candidate-phone').value
+            };
+
+            await testRegistration('/api/candidate/register', data, 'Candidate');
+        }
+
+        async function testRegistration(endpoint, data, type) {
+            const resultDiv = document.getElementById('registration-result');
+            resultDiv.className = 'result info';
+            resultDiv.textContent = `Registering ${type}...`;
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ ${type} Registration Successful!\n\n` +
+                        `Response: ${JSON.stringify(result, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ ${type} Registration Failed!\n\n` +
+                        `Error: ${result.message}\n` +
+                        `Details: ${JSON.stringify(result, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Network Error: ${error.message}`;
+            }
+        }
+
+        async function quickTest(aadhar, email, scenario) {
+            const resultDiv = document.getElementById('registration-result');
+            
+            if (scenario === 'duplicate') {
+                // Test duplicate by registering twice
+                resultDiv.className = 'result info';
+                resultDiv.textContent = 'Testing duplicate registration...\n';
+                
+                const data = {
+                    name: 'First Registration',
+                    age: 25,
+                    gender: 'NotSpecified',
+                    walletAddress: '0x1111111111111111111111111111111111111111',
+                    aadharNumber: aadhar,
+                    email: email
+                };
+
+                // First registration
+                let response1 = await fetch('/api/voter/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                let result1 = await response1.json();
+                
+                // Second registration with different wallet
+                data.name = 'Duplicate Attempt';
+                data.walletAddress = '0x2222222222222222222222222222222222222222';
+                
+                let response2 = await fetch('/api/voter/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                let result2 = await response2.json();
+
+                resultDiv.className = result2.success ? 'result error' : 'result success';
+                resultDiv.textContent = `Duplicate Test Results:\n\n` +
+                    `First attempt: ${result1.success ? 'SUCCESS' : 'FAILED'} - ${result1.message}\n` +
+                    `Second attempt: ${result2.success ? 'SUCCESS (BAD!)' : 'BLOCKED (GOOD)'} - ${result2.message}\n\n` +
+                    `${result2.success ? '❌ Duplicate was NOT prevented!' : '✅ Duplicate prevention working!'}`;
+                    
+            } else if (scenario === 'cross') {
+                // Test cross-registration
+                resultDiv.className = 'result info';
+                resultDiv.textContent = 'Testing cross-registration (voter → candidate)...\n';
+                
+                const voterData = {
+                    name: 'Cross Test Voter',
+                    age: 25,
+                    gender: 'NotSpecified',
+                    walletAddress: '0x3333333333333333333333333333333333333333',
+                    aadharNumber: aadhar,
+                    email: email
+                };
+
+                const candidateData = {
+                    name: 'Cross Test Candidate',
+                    party: 'Test Party',
+                    manifesto: 'Test manifesto',
+                    age: 30,
+                    gender: 'NotSpecified',
+                    walletAddress: '0x4444444444444444444444444444444444444444',
+                    aadharNumber: aadhar,
+                    email: email,
+                    phone: '+1234567890'
+                };
+
+                // Register as voter first
+                let voterResponse = await fetch('/api/voter/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(voterData)
+                });
+                let voterResult = await voterResponse.json();
+                
+                // Try to register as candidate
+                let candidateResponse = await fetch('/api/candidate/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(candidateData)
+                });
+                let candidateResult = await candidateResponse.json();
+
+                resultDiv.className = candidateResult.success ? 'result error' : 'result success';
+                resultDiv.textContent = `Cross-Registration Test Results:\n\n` +
+                    `Voter registration: ${voterResult.success ? 'SUCCESS' : 'FAILED'} - ${voterResult.message}\n` +
+                    `Candidate registration: ${candidateResult.success ? 'SUCCESS (BAD!)' : 'BLOCKED (GOOD)'} - ${candidateResult.message}\n\n` +
+                    `${candidateResult.success ? '❌ Cross-registration was NOT prevented!' : '✅ Cross-registration prevention working!'}`;
+                    
+            } else {
+                // Regular test
+                const data = {
+                    name: 'Quick Test User',
+                    age: 25,
+                    gender: 'NotSpecified',
+                    walletAddress: '0x5555555555555555555555555555555555555555',
+                    aadharNumber: aadhar,
+                    email: email
+                };
+
+                await testRegistration('/api/voter/register', data, 'Quick Test');
+            }
+        }
+    </script>
+</body>
+</html>

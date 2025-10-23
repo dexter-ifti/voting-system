@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aadhar Integration Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: #1e293b;
+            color: white;
+        }
+        .test-section {
+            background: #334155;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        button {
+            background: #06b6d4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0891b2; }
+        input {
+            background: #1e293b;
+            color: white;
+            border: 1px solid #475569;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px;
+            width: 200px;
+        }
+        .result {
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { border-left: 4px solid #10b981; }
+        .error { border-left: 4px solid #ef4444; }
+        .info { border-left: 4px solid #06b6d4; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Aadhar Integration Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Demo Records</h2>
+        <button onclick="testDemoRecords()">Get Demo Records</button>
+        <div id="demo-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Aadhar Validation</h2>
+        <input type="text" id="aadhar-input" placeholder="Enter Aadhar (123456789012)" maxlength="14">
+        <button onclick="validateAadhar()">Validate Aadhar</button>
+        <div id="validate-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test OTP Flow</h2>
+        <input type="text" id="otp-aadhar" placeholder="Enter Aadhar" maxlength="14">
+        <button onclick="sendOTP()">Send OTP</button>
+        <br><br>
+        <input type="text" id="otp-code" placeholder="Enter OTP" maxlength="6">
+        <input type="text" id="otp-key" placeholder="OTP Key (auto-filled)" readonly>
+        <button onclick="verifyOTP()">Verify OTP</button>
+        <div id="otp-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Available Test Aadhar Numbers</h2>
+        <div class="info result">
+123456789012 - tiftikhar@student.iul.ac.in
+234567890123 - john.doe@example.com
+345678901234 - jane.smith@example.com
+111111111111 - voter1@demo.com
+222222222222 - voter2@demo.com
+333333333333 - candidate1@demo.com
+444444444444 - candidate2@demo.com
+555555555555 - admin@demo.com
+        </div>
+    </div>
+
+    <script>
+        // Helper function to format Aadhar number
+        function formatAadhar(value) {
+            const digits = value.replace(/\D/g, '');
+            const limited = digits.substring(0, 12);
+            return limited.replace(/(\d{4})(?=\d)/g, '$1 ');
+        }
+
+        // Auto-format Aadhar inputs
+        document.getElementById('aadhar-input').addEventListener('input', function(e) {
+            e.target.value = formatAadhar(e.target.value);
+        });
+        
+        document.getElementById('otp-aadhar').addEventListener('input', function(e) {
+            e.target.value = formatAadhar(e.target.value);
+        });
+
+        async function testDemoRecords() {
+            const resultDiv = document.getElementById('demo-result');
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Loading demo records...';
+            
+            try {
+                const response = await fetch('/api/aadhar/demo-records');
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Found ${data.count} demo records:\n\n` + 
+                        JSON.stringify(data.data, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ ' + data.message;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Error: ' + error.message;
+            }
+        }
+
+        async function validateAadhar() {
+            const aadharInput = document.getElementById('aadhar-input').value;
+            const cleanAadhar = aadharInput.replace(/\s/g, '');
+            const resultDiv = document.getElementById('validate-result');
+            
+            if (!/^\d{12}$/.test(cleanAadhar)) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Please enter a valid 12-digit Aadhar number';
+                return;
+            }
+            
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Validating Aadhar...';
+            
+            try {
+                const response = await fetch('/api/aadhar/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ aadharNumber: cleanAadhar })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Aadhar validated successfully!\n\n` + 
+                        JSON.stringify(data.data, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ ' + data.message;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Error: ' + error.message;
+            }
+        }
+
+        async function sendOTP() {
+            const aadharInput = document.getElementById('otp-aadhar').value;
+            const cleanAadhar = aadharInput.replace(/\s/g, '');
+            const resultDiv = document.getElementById('otp-result');
+            
+            if (!/^\d{12}$/.test(cleanAadhar)) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Please enter a valid 12-digit Aadhar number';
+                return;
+            }
+            
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Sending OTP...';
+            
+            try {
+                const response = await fetch('/api/aadhar/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ aadharNumber: cleanAadhar })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ OTP sent successfully!\n\n` + 
+                        JSON.stringify(data.data, null, 2);
+                    
+                    // Auto-fill OTP key
+                    document.getElementById('otp-key').value = data.data.otpKey;
+                    // For demo purposes, show the OTP (remove in production)
+                    if (data.data.otp) {
+                        document.getElementById('otp-code').value = data.data.otp;
+                    }
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ ' + data.message;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Error: ' + error.message;
+            }
+        }
+
+        async function verifyOTP() {
+            const otpCode = document.getElementById('otp-code').value;
+            const otpKey = document.getElementById('otp-key').value;
+            const resultDiv = document.getElementById('otp-result');
+            
+            if (!otpCode || !otpKey) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Please provide both OTP code and key';
+                return;
+            }
+            
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Verifying OTP...';
+            
+            try {
+                const response = await fetch('/api/aadhar/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ otpKey, otp: otpCode })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ OTP verified successfully!\n\n` + 
+                        JSON.stringify(data.data, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ ' + data.message;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
