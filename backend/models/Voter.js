@@ -42,6 +42,20 @@ const voterSchema = new mongoose.Schema({
         lowercase: true,
         trim: true
     },
+    aadharNumber: {
+        type: String,
+        required: true,
+        unique: true,
+        validate: {
+            validator: function(v) {
+                return /^\d{12}$/.test(v.replace(/\s|-/g, ''));
+            },
+            message: 'Aadhar number must be exactly 12 digits'
+        },
+        set: function(v) {
+            return v.replace(/\s|-/g, ''); // Remove spaces and hyphens
+        }
+    },
     phone: {
         type: String,
         unique: true,
@@ -110,6 +124,7 @@ const voterSchema = new mongoose.Schema({
 // Index for faster queries
 voterSchema.index({ walletAddress: 1 });
 voterSchema.index({ voterId: 1 });
+voterSchema.index({ aadharNumber: 1 });
 voterSchema.index({ isActive: 1, isEligible: 1 });
 
 module.exports = mongoose.model('Voter', voterSchema);

@@ -11,6 +11,7 @@ const voterRoutes = require('./routes/voter');
 const candidateRoutes = require('./routes/candidate');
 const electionRoutes = require('./routes/election');
 const blockchainRoutes = require('./routes/blockchain');
+const aadharValidationRoutes = require('./routes/aadharValidation');
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/voter', voterRoutes);
 app.use('/api/candidate', candidateRoutes);
 app.use('/api/election', electionRoutes);
 app.use('/api/blockchain', blockchainRoutes);
+app.use('/api/aadhar', aadharValidationRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
