@@ -60,9 +60,12 @@ router.post('/create', [
             });
         }
 
+        // Generate a unique election ID using timestamp to avoid duplicates
+        const uniqueElectionId = `${deployResult.contractAddress}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
         // Create election record
         const election = new Election({
-            electionId: deployResult.contractAddress,
+            electionId: uniqueElectionId,
             title,
             description,
             electionType,
@@ -871,6 +874,51 @@ router.get('/:contractAddress/results', [
             success: false,
             message: 'Failed to get results',
             error: error.message
+        });
+    }
+});
+
+// Development helper routes
+
+// Get contract usage statistics
+router.get('/dev/contract-stats', async (req, res) => {
+    try {
+        const stats = await ElectionMappingService.getContractUsageStats();
+        
+        res.json({
+            success: true,
+            message: 'Contract usage statistics',
+            data: {
+                contractStats: stats,
+                totalUniqueContracts: stats.length,
+                totalElections: stats.reduce((sum, stat) => sum + stat.count, 0)
+            }
+        });
+    } catch (error) {
+        console.error('Contract stats error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get contract statistics'
+        });
+    }
+});
+
+// Clean up old test elections
+router.delete('/dev/cleanup-test', async (req, res) => {
+    try {
+        const { olderThanHours = 24 } = req.query;
+        const result = await ElectionMappingService.cleanupTestElections(Number(olderThanHours));
+        
+        res.json({
+            success: true,
+            message: 'Cleanup completed',
+            data: result
+        });
+    } catch (error) {
+        console.error('Cleanup error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to cleanup test elections'
         });
     }
 });

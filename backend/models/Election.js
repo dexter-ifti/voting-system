@@ -5,7 +5,10 @@ const electionSchema = new mongoose.Schema({
     electionId: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        default: function() {
+            return this.contractAddress;
+        }
     },
     title: {
         type: String,
@@ -179,12 +182,12 @@ electionSchema.index({ status: 1 });
 electionSchema.index({ votingStartTime: 1, votingEndTime: 1 });
 electionSchema.index({ deployedBy: 1 });
 
-// Update election ID with contract address after deployment
-electionSchema.pre('save', function (next) {
-    if (this.contractAddress && !this.electionId) {
-        this.electionId = this.contractAddress;
-    }
-    next();
-});
+// Remove the pre-save hook since we're using default function for electionId
+// electionSchema.pre('save', function (next) {
+//     if (!this.electionId) {
+//         this.electionId = `${this.contractAddress}_${Date.now()}`;
+//     }
+//     next();
+// });
 
 module.exports = mongoose.model('Election', electionSchema);
