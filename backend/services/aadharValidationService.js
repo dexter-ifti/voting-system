@@ -177,7 +177,7 @@ class AadharValidationService {
       };
     }
 
-    // OTP verified successfully
+    // OTP verified successfully return success
     const result = {
       isValid: true,
       message: "Aadhar verified successfully",
