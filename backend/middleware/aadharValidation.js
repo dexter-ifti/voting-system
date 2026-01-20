@@ -38,7 +38,7 @@ const validateAadharRegistration = async (req, res, next) => {
     }
 
     // If email is provided, validate it matches Aadhar records
-    if (email && email.toLowerCase() !== validationResult.email.toLowerCase()) {
+    if (email && email.toLowerCase() != validationResult.email.toLowerCase()) {
       return res.status(400).json({
         success: false,
         message: `Email does not match the one associated with this Aadhar number. Expected: ${validationResult.email}`
