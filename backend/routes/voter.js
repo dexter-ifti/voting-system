@@ -218,7 +218,9 @@ router.post('/register', [
 router.post('/register-election', [
     body('contractAddress').isEthereumAddress().withMessage('Valid contract address required'),
     body('walletAddress').isEthereumAddress().withMessage('Valid wallet address required'),
-    body('privateKey').notEmpty().withMessage('Private key required for blockchain registration')
+    body('adminAddress').matches(/^0x[a-fA-F0-9]{40}$/).withMessage('Valid admin address required'),
+    body('signature').notEmpty().withMessage('Admin signature required for verification'),
+    body('message').notEmpty().withMessage('Signed message required for verification')
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -230,10 +232,37 @@ router.post('/register-election', [
             });
         }
 
-        const { contractAddress, walletAddress, privateKey } = req.body;
+        const { contractAddress, walletAddress, adminAddress, signature, message } = req.body;
+
+        // Verify admin signature from MetaMask
+        try {
+            const recoveredAddress = ethers.verifyMessage(message, signature);
+            if (recoveredAddress.toLowerCase() !== adminAddress.toLowerCase()) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid admin signature'
+                });
+            }
+        } catch (error) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid signature format',
+                error: error.message
+            });
+        }
+
+        // Verify the admin address is authorized (check against Admin model or env)
+        const Admin = require('../models/Admin');
+        const admin = await Admin.findOne({ walletAddress: adminAddress.toLowerCase() });
+        if (!admin || admin.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Unauthorized: Not a valid admin address'
+            });
+        }
 
         // Find voter in database
-        const voter = await Voter.findOne({ walletAddress: walletAddress.toLowerCase() });
+        const voter = await Voter.findOne({ walletAddress: walletAddress });
         if (!voter) {
             return res.status(404).json({
                 success: false,
@@ -274,12 +303,18 @@ router.post('/register-election', [
         let onChainId;
         
         try {
+            // Use admin private key from environment variables (more secure)
+            const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
+            if (!adminPrivateKey) {
+                throw new Error('Admin private key not configured in environment');
+            }
+
             result = await blockchainService.registerVoter(
                 contractAddress,
                 voter.name,
                 voter.age,
                 ['NotSpecified', 'Male', 'Female', 'Other'].indexOf(voter.gender),
-                privateKey
+                adminPrivateKey
             );
             onChainId = result.voterId;
         } catch (blockchainError) {
