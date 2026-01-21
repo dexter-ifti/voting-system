@@ -96,12 +96,7 @@ export const AadharOTPVerification = ({ aadharNumber, email, otpKey, onVerificat
         setError('');
         try {
             const response = await verifyOTP(otpKey, otp);
-            console.log('OTP Verification Response:', response); // Debug log
             if (response.success && response.data?.isValid) {
-                console.log('Calling onVerificationSuccess with:', {
-                    aadharNumber: response.data.aadhar,
-                    email: response.data.email
-                }); // Debug log
                 onVerificationSuccess({
                     aadharNumber: response.data.aadhar,
                     email: response.data.email

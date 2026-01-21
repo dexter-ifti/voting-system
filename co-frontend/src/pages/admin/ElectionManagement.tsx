@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react';
 import { api, updateElectionStatus } from '../../lib/api';
 import { CreateElectionForm } from './CreateElectionForm';
 
+// Extend Window interface to include ethereum property for MetaMask
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 interface Election {
   _id: string;
   title: string;
@@ -210,13 +217,32 @@ export const ElectionManagement = () => {
   };
 
   const handleAddVoterToElection = async () => {
-    if (!selectedElection || !addVoterForm.walletAddress || !addVoterForm.privateKey) return;
+    if (!selectedElection || !addVoterForm.walletAddress) return;
     setAddVoterForm(prev => ({ ...prev, loading: true }));
     try {
+      // Check if MetaMask is installed
+      if (!window.ethereum) {
+        alert('Please install MetaMask to continue');
+        setAddVoterForm(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
+      // Connect MetaMask and get admin's signature
+      const { ethers } = await import('ethers');
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const adminAddress = await signer.getAddress();
+
+      // Sign message for verification
+      const message = `Register voter for election at ${selectedElection.contractAddress} - ${Date.now()}`;
+      const signature = await signer.signMessage(message);
+
       const { data } = await api.post('/voter/register-election', {
         contractAddress: selectedElection.contractAddress,
         walletAddress: addVoterForm.walletAddress.trim(),
-        privateKey: addVoterForm.privateKey.trim()
+        adminAddress,
+        signature,
+        message
       });
       if (data.success) {
         alert('Voter added to election successfully');
@@ -225,19 +251,42 @@ export const ElectionManagement = () => {
         if (selectedElection) await loadAnalytics(selectedElection.contractAddress);
       }
     } catch (error: any) {
-      alert(error?.response?.data?.message || 'Failed to add voter to election');
+      if (error.code === 4001) {
+        alert('MetaMask signature request was rejected');
+      } else {
+        alert(error?.response?.data?.message || error.message || 'Failed to add voter to election');
+      }
       setAddVoterForm(prev => ({ ...prev, loading: false }));
     }
   };
 
   const handleAddCandidateToElection = async () => {
-    if (!selectedElection || !addCandidateForm.walletAddress || !addCandidateForm.privateKey) return;
+    if (!selectedElection || !addCandidateForm.walletAddress) return;
     setAddCandidateForm(prev => ({ ...prev, loading: true }));
     try {
+      // Check if MetaMask is installed
+      if (!window.ethereum) {
+        alert('Please install MetaMask to continue');
+        setAddCandidateForm(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
+      // Connect MetaMask and get admin's signature
+      const { ethers } = await import('ethers');
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const adminAddress = await signer.getAddress();
+
+      // Sign message for verification
+      const message = `Register candidate for election at ${selectedElection.contractAddress} - ${Date.now()}`;
+      const signature = await signer.signMessage(message);
+
       const { data } = await api.post('/candidate/register-election', {
         contractAddress: selectedElection.contractAddress,
         walletAddress: addCandidateForm.walletAddress.trim(),
-        privateKey: addCandidateForm.privateKey.trim()
+        adminAddress,
+        signature,
+        message
       });
       if (data.success) {
         alert('Candidate added to election successfully');
@@ -246,7 +295,11 @@ export const ElectionManagement = () => {
         if (selectedElection) await loadAnalytics(selectedElection.contractAddress);
       }
     } catch (error: any) {
-      alert(error?.response?.data?.message || 'Failed to add candidate to election');
+      if (error.code === 4001) {
+        alert('MetaMask signature request was rejected');
+      } else {
+        alert(error?.response?.data?.message || error.message || 'Failed to add candidate to election');
+      }
       setAddCandidateForm(prev => ({ ...prev, loading: false }));
     }
   };
@@ -781,19 +834,19 @@ export const ElectionManagement = () => {
                         onChange={(e) => setAddVoterForm(prev => ({ ...prev, walletAddress: e.target.value }))}
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-400 mb-2">Admin/Authorized Private Key</label>
-                      <input
-                        type="password"
-                        className="w-full px-4 py-3 bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 transition-all duration-300"
-                        placeholder="Enter private key"
-                        value={addVoterForm.privateKey}
-                        onChange={(e) => setAddVoterForm(prev => ({ ...prev, privateKey: e.target.value }))}
-                      />
+                    <div className="bg-blue-500/10 backdrop-blur-sm rounded-2xl p-3 border border-blue-400/30">
+                      <div className="flex items-start space-x-2">
+                        <svg className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-blue-200/80 text-xs leading-relaxed">
+                          You'll be prompted to sign with MetaMask to verify admin authorization
+                        </p>
+                      </div>
                     </div>
                     <button
                       onClick={handleAddVoterToElection}
-                      disabled={addVoterForm.loading || !addVoterForm.walletAddress || !addVoterForm.privateKey}
+                      disabled={addVoterForm.loading || !addVoterForm.walletAddress}
                       className="group relative w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/25 font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -836,19 +889,19 @@ export const ElectionManagement = () => {
                         onChange={(e) => setAddCandidateForm(prev => ({ ...prev, walletAddress: e.target.value }))}
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-purple-400 mb-2">Admin/Authorized Private Key</label>
-                      <input
-                        type="password"
-                        className="w-full px-4 py-3 bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-400/50 transition-all duration-300"
-                        placeholder="Enter private key"
-                        value={addCandidateForm.privateKey}
-                        onChange={(e) => setAddCandidateForm(prev => ({ ...prev, privateKey: e.target.value }))}
-                      />
+                    <div className="bg-purple-500/10 backdrop-blur-sm rounded-2xl p-3 border border-purple-400/30">
+                      <div className="flex items-start space-x-2">
+                        <svg className="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-purple-200/80 text-xs leading-relaxed">
+                          You'll be prompted to sign with MetaMask to verify admin authorization
+                        </p>
+                      </div>
                     </div>
                     <button
                       onClick={handleAddCandidateToElection}
-                      disabled={addCandidateForm.loading || !addCandidateForm.walletAddress || !addCandidateForm.privateKey}
+                      disabled={addCandidateForm.loading || !addCandidateForm.walletAddress}
                       className="group relative w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-purple-500/25 font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

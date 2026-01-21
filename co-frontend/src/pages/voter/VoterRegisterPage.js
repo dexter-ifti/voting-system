@@ -91,7 +91,6 @@ export const VoterRegisterPage = () => {
     };
     // Handle OTP verification success
     const handleOTPVerificationSuccess = (data) => {
-        console.log('OTP Verification Success:', data); // Debug log
         setVerifiedAadharData(data);
         setAadharStep('verified');
         setShowOTPModal(false);
