@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const adminRoutes = require('./routes/admin');
@@ -11,7 +12,7 @@ const voterRoutes = require('./routes/voter');
 const candidateRoutes = require('./routes/candidate');
 const electionRoutes = require('./routes/election');
 const blockchainRoutes = require('./routes/blockchain');
-const aadharValidationRoutes = require('./routes/aadharValidation');
+const studentValidationRoutes = require('./routes/studentValidation');
 
 const app = express();
 
@@ -50,7 +51,7 @@ app.use('/api/voter', voterRoutes);
 app.use('/api/candidate', candidateRoutes);
 app.use('/api/election', electionRoutes);
 app.use('/api/blockchain', blockchainRoutes);
-app.use('/api/aadhar', aadharValidationRoutes);
+app.use('/api/student', studentValidationRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -70,6 +71,19 @@ app.use((err, req, res, next) => {
         ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     });
 });
+
+// Serve frontend static files in production
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, 'public')));
+
+    // SPA catch-all: serve index.html for any non-API route
+    app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api') || req.path === '/health') {
+            return next();
+        }
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+}
 
 // 404 handler
 app.use('*', (req, res) => {
