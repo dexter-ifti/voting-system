@@ -4,7 +4,7 @@ interface DemoOTPDisplayProps {
   otpData?: {
     otp: string;
     email: string;
-    aadharNumber: string;
+    studentId: string;
   } | null;
   onClose: () => void;
 }
