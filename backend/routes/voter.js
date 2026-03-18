@@ -6,7 +6,7 @@ const { body, param, validationResult } = require('express-validator');
 const Voter = require('../models/Voter');
 const Election = require('../models/Election');
 const blockchainService = require('../services/blockchainService');
-const { validateAadharRegistration } = require('../middleware/aadharValidation');
+const { validateStudentRegistration } = require('../middleware/studentValidation');
 const router = express.Router();
 
 // Voter authentication middleware
@@ -144,10 +144,10 @@ router.post('/register', [
     body('age').isInt({ min: 18, max: 120 }).withMessage('Age must be between 18 and 120'),
     body('gender').isIn(['NotSpecified', 'Male', 'Female', 'Other']),
     body('walletAddress').isEthereumAddress().withMessage('Valid wallet address required'),
-    body('aadharNumber').notEmpty().withMessage('Aadhar number is required'),
+    body('studentId').notEmpty().withMessage('Student ID is required'),
     body('email').optional().isEmail().normalizeEmail(),
     body('phone').optional().isMobilePhone(),
-], validateAadharRegistration, async (req, res) => {
+], validateStudentRegistration, async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -158,9 +158,9 @@ router.post('/register', [
             });
         }
 
-        const { name, age, gender, walletAddress, email, phone, address, aadharNumber } = req.body;
+        const { name, age, gender, walletAddress, email, phone, address, studentId } = req.body;
 
-        // Check if voter already exists (excluding Aadhar - already checked by middleware)
+        // Check if voter already exists (excluding Student ID - already checked by middleware)
         const existingVoter = await Voter.findOne({
             $or: [
                 { walletAddress: walletAddress.toLowerCase() },
@@ -182,7 +182,7 @@ router.post('/register', [
             age,
             gender,
             walletAddress: walletAddress.toLowerCase(), // Store in lowercase for consistency
-            aadharNumber, // Clean aadhar number from middleware
+            studentId, // Clean student ID from middleware
             email,
             phone,
             address,
