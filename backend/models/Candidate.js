@@ -52,19 +52,40 @@ const candidateSchema = new mongoose.Schema({
         lowercase: true,
         trim: true
     },
-    aadharNumber: {
+    studentId: {
         type: String,
         required: true,
         unique: true,
         validate: {
             validator: function(v) {
-                return /^\d{12}$/.test(v.replace(/\s|-/g, ''));
+                return /^[A-Z]{2}\d{10}$/.test(v.toUpperCase());
             },
-            message: 'Aadhar number must be exactly 12 digits'
+            message: 'Invalid student ID format'
         },
         set: function(v) {
-            return v.replace(/\s|-/g, ''); // Remove spaces and hyphens
+            return v.toUpperCase().trim();
         }
+    },
+    enrollmentYear: {
+        type: Number,
+        required: true,
+        validate: {
+            validator: function(v) {
+                const currentYear = new Date().getFullYear();
+                return v >= 2000 && v <= currentYear + 1;
+            },
+            message: 'Invalid enrollment year'
+        }
+    },
+    department: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    program: {
+        type: String,
+        enum: ['Undergraduate', 'Graduate', 'PhD', 'Diploma'],
+        required: true
     },
     phone: {
         type: String,
@@ -137,7 +158,8 @@ const candidateSchema = new mongoose.Schema({
 // Index for faster queries
 candidateSchema.index({ walletAddress: 1 });
 candidateSchema.index({ candidateId: 1 });
-candidateSchema.index({ aadharNumber: 1 });
+candidateSchema.index({ studentId: 1 });
+candidateSchema.index({ enrollmentYear: 1, department: 1 });
 candidateSchema.index({ isActive: 1, verificationStatus: 1 });
 
 module.exports = mongoose.model('Candidate', candidateSchema);
