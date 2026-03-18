@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { api } from '../../lib/api';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { AadharOTPVerification } from '../../components/AadharOTPVerification';
+import { StudentOTPVerification } from '../../components/StudentOTPVerification';
 import { DemoOTPDisplay } from '../../components/DemoOTPDisplay';
-import { validateAadhar, sendOTP, formatAadharNumber, isValidAadharFormat, getCleanAadhar } from '../../lib/aadharApi';
+import { validateStudentId, sendOTP, formatStudentId, isValidStudentIdFormat, getCleanStudentId } from '../../lib/studentApi';
 
 export const CandidateRegisterPage = () => {
   const [loading, setLoading] = useState(false);
@@ -17,60 +17,60 @@ export const CandidateRegisterPage = () => {
     walletAddress:'', 
     email:'', 
     phone:'',
-    aadharNumber: ''
+    studentId: ''
   });
 
-  // Aadhar verification states
-  const [aadharStep, setAadharStep] = useState<'input' | 'verifying' | 'verified'>('input');
-  const [aadharValidating, setAadharValidating] = useState(false);
-  const [aadharError, setAadharError] = useState('');
-  const [verifiedAadharData, setVerifiedAadharData] = useState<{ aadharNumber: string; email: string } | null>(null);
+  // Student verification states
+  const [studentStep, setStudentStep] = useState<'input' | 'verifying' | 'verified'>('input');
+  const [studentValidating, setStudentValidating] = useState(false);
+  const [studentError, setStudentError] = useState('');
+  const [verifiedStudentData, setVerifiedStudentData] = useState<{ studentId: string; email: string } | null>(null);
   
   // OTP verification states
   const [showOTPModal, setShowOTPModal] = useState(false);
-  const [otpData, setOtpData] = useState<{ otpKey: string; email: string; aadharNumber: string } | null>(null);
+  const [otpData, setOtpData] = useState<{ otpKey: string; email: string; studentId: string } | null>(null);
   const [resendingOTP, setResendingOTP] = useState(false);
   
   // Demo OTP display state
-  const [demoOTPData, setDemoOTPData] = useState<{ otp: string; email: string; aadharNumber: string } | null>(null);
+  const [demoOTPData, setDemoOTPData] = useState<{ otp: string; email: string; studentId: string } | null>(null);
 
-  // Handle Aadhar input change with formatting
-  const handleAadharChange = (value: string) => {
-    const formatted = formatAadharNumber(value);
-    setForm(f => ({ ...f, aadharNumber: formatted }));
-    setAadharError('');
-    if (aadharStep === 'verified') {
-      setAadharStep('input');
-      setVerifiedAadharData(null);
+  // Handle Student ID input change with formatting
+  const handleStudentIdChange = (value: string) => {
+    const formatted = formatStudentId(value);
+    setForm(f => ({ ...f, studentId: formatted }));
+    setStudentError('');
+    if (studentStep === 'verified') {
+      setStudentStep('input');
+      setVerifiedStudentData(null);
     }
   };
 
-  // Validate and verify Aadhar
-  const handleAadharValidation = async () => {
-    const cleanAadhar = getCleanAadhar(form.aadharNumber);
+  // Validate and verify Student ID
+  const handleStudentIdValidation = async () => {
+    const cleanId = getCleanStudentId(form.studentId);
     
-    if (!isValidAadharFormat(cleanAadhar)) {
-      setAadharError('Please enter a valid 12-digit Aadhar number');
+    if (!isValidStudentIdFormat(cleanId)) {
+      setStudentError('Please enter a valid Student ID (e.g., IU2021001234)');
       return;
     }
 
-    setAadharValidating(true);
-    setAadharError('');
+    setStudentValidating(true);
+    setStudentError('');
 
     try {
-      // Step 1: Validate Aadhar exists
-      const validateResponse = await validateAadhar(cleanAadhar);
+      // Step 1: Validate Student ID exists
+      const validateResponse = await validateStudentId(cleanId);
       
       if (!validateResponse.success || !validateResponse.data) {
-        setAadharError(validateResponse.message || 'Aadhar number not found in our records');
+        setStudentError(validateResponse.message || 'Student ID not found in college records');
         return;
       }
 
       // Step 2: Send OTP
-      const otpResponse = await sendOTP(cleanAadhar);
+      const otpResponse = await sendOTP(cleanId);
       
       if (!otpResponse.success || !otpResponse.data) {
-        setAadharError(otpResponse.message || 'Failed to send OTP');
+        setStudentError(otpResponse.message || 'Failed to send OTP');
         return;
       }
 
@@ -78,17 +78,17 @@ export const CandidateRegisterPage = () => {
       setOtpData({
         otpKey: otpResponse.data.otpKey,
         email: validateResponse.data.email,
-        aadharNumber: cleanAadhar
+        studentId: cleanId
       });
       setShowOTPModal(true);
-      setAadharStep('verifying');
+      setStudentStep('verifying');
 
       // For demo: show OTP in floating component if available in response
       if (otpResponse.data.otp) {
         setDemoOTPData({
           otp: otpResponse.data.otp,
           email: validateResponse.data.email,
-          aadharNumber: cleanAadhar
+          studentId: cleanId
         });
         
         // Auto-hide demo OTP after 30 seconds or when modal closes
@@ -100,16 +100,16 @@ export const CandidateRegisterPage = () => {
       toast.success(`OTP sent to ${validateResponse.data.email}`);
       
     } catch (error: any) {
-      setAadharError(error.response?.data?.message || 'Aadhar validation failed');
+      setStudentError(error.response?.data?.message || 'Student ID validation failed');
     } finally {
-      setAadharValidating(false);
+      setStudentValidating(false);
     }
   };
 
   // Handle OTP verification success
-  const handleOTPVerificationSuccess = (data: { aadharNumber: string; email: string }) => {
-    setVerifiedAadharData(data);
-    setAadharStep('verified');
+  const handleOTPVerificationSuccess = (data: { studentId: string; email: string }) => {
+    setVerifiedStudentData(data);
+    setStudentStep('verified');
     setShowOTPModal(false);
     setOtpData(null);
     setDemoOTPData(null); // Hide demo OTP on success
@@ -119,7 +119,7 @@ export const CandidateRegisterPage = () => {
       setForm(f => ({ ...f, email: data.email }));
     }
     
-    toast.success('Aadhar verified successfully!');
+    toast.success('Student ID verified successfully!');
   };
 
   // Handle OTP modal cancel
@@ -127,7 +127,7 @@ export const CandidateRegisterPage = () => {
     setShowOTPModal(false);
     setOtpData(null);
     setDemoOTPData(null); // Hide demo OTP on cancel
-    setAadharStep('input');
+    setStudentStep('input');
   };
 
   // Handle OTP resend
@@ -136,7 +136,7 @@ export const CandidateRegisterPage = () => {
 
     setResendingOTP(true);
     try {
-      const otpResponse = await sendOTP(otpData.aadharNumber);
+      const otpResponse = await sendOTP(otpData.studentId);
       
       if (otpResponse.success && otpResponse.data) {
         setOtpData(prev => prev ? {
@@ -157,9 +157,9 @@ export const CandidateRegisterPage = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if Aadhar is verified
-    if (aadharStep !== 'verified' || !verifiedAadharData) {
-      toast.error('Please verify your Aadhar number first');
+    // Check if Student ID is verified
+    if (studentStep !== 'verified' || !verifiedStudentData) {
+      toast.error('Please verify your Student ID first');
       return;
     }
     
@@ -167,7 +167,7 @@ export const CandidateRegisterPage = () => {
     try {
       const formData = {
         ...form,
-        aadharNumber: verifiedAadharData.aadharNumber
+        studentId: verifiedStudentData.studentId
       };
       
       const { data } = await api.post('/candidate/register', formData);
@@ -218,72 +218,72 @@ export const CandidateRegisterPage = () => {
 
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-slate-300">
-                  Aadhar Number
+                  Student ID
                 </label>
                 <div className="space-y-3">
                   <div className="relative">
                     <input 
-                      value={form.aadharNumber} 
-                      onChange={e => handleAadharChange(e.target.value)}
+                      value={form.studentId} 
+                      onChange={e => handleStudentIdChange(e.target.value)}
                       required 
-                      placeholder="1234 5678 9012"
-                      maxLength={14} // 12 digits + 2 spaces
+                      placeholder="IU-2021-001234"
+                      maxLength={15}
                       className={`w-full px-4 py-3 bg-slate-700/50 border rounded-2xl text-white placeholder-slate-400 focus:ring-2 focus:outline-none transition-all duration-300 font-mono ${
-                        aadharError 
+                        studentError 
                           ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' 
-                          : aadharStep === 'verified'
+                          : studentStep === 'verified'
                           ? 'border-emerald-500/50 focus:border-emerald-500 focus:ring-emerald-500/20'
                           : 'border-slate-600/50 focus:border-purple-500/50 focus:ring-purple-500/20'
                       }`}
-                      disabled={aadharStep === 'verified'}
+                      disabled={studentStep === 'verified'}
                     />
-                    {aadharStep === 'verified' && (
+                    {studentStep === 'verified' && (
                       <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                         <span className="text-emerald-400 text-xl">✓</span>
                       </div>
                     )}
                   </div>
                   
-                  {aadharError && (
+                  {studentError && (
                     <p className="text-red-400 text-sm flex items-center">
                       <span className="mr-1">⚠️</span>
-                      {aadharError}
+                      {studentError}
                     </p>
                   )}
                   
-                  {aadharStep === 'verified' && verifiedAadharData && (
+                  {studentStep === 'verified' && verifiedStudentData && (
                     <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
                       <p className="text-emerald-300 text-sm flex items-center">
                         <span className="mr-2">✅</span>
-                        Aadhar verified with email: {verifiedAadharData.email}
+                        Student ID verified with email: {verifiedStudentData.email}
                       </p>
                     </div>
                   )}
                   
                   <button
                     type="button"
-                    onClick={handleAadharValidation}
-                    disabled={!form.aadharNumber || aadharValidating || aadharStep === 'verified'}
+                    onClick={handleStudentIdValidation}
+                    disabled={!form.studentId || studentValidating || studentStep === 'verified'}
                     className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      aadharStep === 'verified'
+                      studentStep === 'verified'
                         ? 'bg-emerald-600/20 border border-emerald-500/30 text-emerald-300 cursor-default'
                         : 'bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/30 hover:border-purple-500/50'
                     }`}
                   >
-                    {aadharValidating ? (
+                    {studentValidating ? (
                       <div className="flex items-center justify-center space-x-2">
                         <div className="w-5 h-5 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin"></div>
-                        <span>Validating Aadhar...</span>
+                        <span>Validating Student ID...</span>
                       </div>
-                    ) : aadharStep === 'verified' ? (
+                    ) : studentStep === 'verified' ? (
                       <div className="flex items-center justify-center space-x-2">
                         <span>✅</span>
-                        <span>Aadhar Verified</span>
+                        <span>Student ID Verified</span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-center space-x-2">
                         <span>🔍</span>
-                        <span>Verify Aadhar</span>
+                        <span>Verify Student ID</span>
                       </div>
                     )}
                   </button>
@@ -463,7 +463,7 @@ export const CandidateRegisterPage = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || aadharStep !== 'verified'}
+              disabled={loading || studentStep !== 'verified'}
               className="w-full relative overflow-hidden bg-gradient-to-r from-purple-600 to-orange-600 text-white py-4 px-8 rounded-2xl font-semibold text-lg shadow-2xl shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group"
             >
               <span className="relative z-10">
@@ -472,10 +472,10 @@ export const CandidateRegisterPage = () => {
                     <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     <span>Submitting Registration...</span>
                   </div>
-                ) : aadharStep !== 'verified' ? (
+                ) : studentStep !== 'verified' ? (
                   <div className="flex items-center justify-center space-x-3">
                     <span>🔒</span>
-                    <span>Complete Aadhar Verification First</span>
+                    <span>Complete Student ID Verification First</span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center space-x-3">
@@ -513,8 +513,8 @@ export const CandidateRegisterPage = () => {
       
       {/* OTP Verification Modal */}
       {showOTPModal && otpData && (
-        <AadharOTPVerification
-          aadharNumber={otpData.aadharNumber}
+        <StudentOTPVerification
+          studentId={otpData.studentId}
           email={otpData.email}
           otpKey={otpData.otpKey}
           onVerificationSuccess={handleOTPVerificationSuccess}
