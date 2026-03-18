@@ -6,7 +6,7 @@ const { body, param, validationResult } = require('express-validator');
 const Candidate = require('../models/Candidate');
 const Election = require('../models/Election');
 const blockchainService = require('../services/blockchainService');
-const { validateAadharRegistration } = require('../middleware/aadharValidation');
+const { validateStudentRegistration } = require('../middleware/studentValidation');
 const router = express.Router();
 
 // Candidate authentication middleware
@@ -147,10 +147,10 @@ router.post('/register', [
     body('age').isInt({ min: 18, max: 120 }).withMessage('Age must be between 18 and 120'),
     body('gender').isIn(['NotSpecified', 'Male', 'Female', 'Other']),
     body('walletAddress').matches(/^0x[a-fA-F0-9]{40}$/).withMessage('Valid wallet address required'),
-    body('aadharNumber').notEmpty().withMessage('Aadhar number is required'),
+    body('studentId').notEmpty().withMessage('Student ID is required'),
     body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
     body('phone').isMobilePhone().withMessage('Valid phone number required')
-], validateAadharRegistration, async (req, res) => {
+], validateStudentRegistration, async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -164,10 +164,10 @@ router.post('/register', [
         const {
             name, party, manifesto, age, gender, walletAddress,
             email, phone, address, education, experience,
-            achievements, socialMedia, aadharNumber
+            achievements, socialMedia, studentId
         } = req.body;
 
-        // Check if candidate already exists (excluding Aadhar - already checked by middleware)
+        // Check if candidate already exists (excluding Student ID - already checked by middleware)
         const existingCandidate = await Candidate.findOne({
             $or: [
                 { walletAddress: walletAddress.toLowerCase() },
@@ -191,7 +191,7 @@ router.post('/register', [
             age,
             gender,
             walletAddress: walletAddress.toLowerCase(), // Store in lowercase for consistency
-            aadharNumber, // Clean aadhar number from middleware
+            studentId, // Clean student ID from middleware
             email,
             phone,
             address,
