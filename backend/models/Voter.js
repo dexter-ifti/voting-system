@@ -42,19 +42,41 @@ const voterSchema = new mongoose.Schema({
         lowercase: true,
         trim: true
     },
-    aadharNumber: {
+    studentId: {
         type: String,
         required: true,
         unique: true,
         validate: {
             validator: function(v) {
-                return /^\d{12}$/.test(v.replace(/\s|-/g, ''));
+                // Format: XX0000000000 (2-letter prefix + 10 digits)
+                return /^[A-Z]{2}\d{10}$/.test(v.toUpperCase());
             },
-            message: 'Aadhar number must be exactly 12 digits'
+            message: 'Invalid student ID format'
         },
         set: function(v) {
-            return v.replace(/\s|-/g, ''); // Remove spaces and hyphens
+            return v.toUpperCase().trim(); // Normalize to uppercase
         }
+    },
+    enrollmentYear: {
+        type: Number,
+        required: true,
+        validate: {
+            validator: function(v) {
+                const currentYear = new Date().getFullYear();
+                return v >= 2000 && v <= currentYear + 1;
+            },
+            message: 'Invalid enrollment year'
+        }
+    },
+    department: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    program: {
+        type: String,
+        enum: ['Undergraduate', 'Graduate', 'PhD', 'Diploma'],
+        required: true
     },
     phone: {
         type: String,
@@ -108,7 +130,7 @@ const voterSchema = new mongoose.Schema({
     verificationDocuments: [{
         documentType: {
             type: String,
-            enum: ['aadhar', 'passport', 'driving_license', 'voter_id']
+            enum: ['student_id', 'passport', 'driving_license', 'voter_id']
         },
         documentNumber: String,
         documentUrl: String,
@@ -124,7 +146,8 @@ const voterSchema = new mongoose.Schema({
 // Index for faster queries
 voterSchema.index({ walletAddress: 1 });
 voterSchema.index({ voterId: 1 });
-voterSchema.index({ aadharNumber: 1 });
+voterSchema.index({ studentId: 1 });
+voterSchema.index({ enrollmentYear: 1, department: 1 });
 voterSchema.index({ isActive: 1, isEligible: 1 });
 
 module.exports = mongoose.model('Voter', voterSchema);
