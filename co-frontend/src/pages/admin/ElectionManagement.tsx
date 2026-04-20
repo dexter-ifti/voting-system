@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api, updateElectionStatus } from '../../lib/api';
 import { CreateElectionForm } from './CreateElectionForm';
 
+const DEFAULT_ADMIN_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
 // Extend Window interface to include ethereum property for MetaMask
 declare global {
   interface Window {
@@ -59,13 +61,13 @@ export const ElectionManagement = () => {
   const [selectedElection, setSelectedElection] = useState<Election | null>(null);
   const [analytics, setAnalytics] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
-  const [emergencyStopForm, setEmergencyStopForm] = useState({ show: false, reason: '', privateKey: '' });
-  const [announceResultsForm, setAnnounceResultsForm] = useState({ show: false, privateKey: '' });
+  const [emergencyStopForm, setEmergencyStopForm] = useState({ show: false, reason: '', privateKey: DEFAULT_ADMIN_PRIVATE_KEY });
+  const [announceResultsForm, setAnnounceResultsForm] = useState({ show: false, privateKey: DEFAULT_ADMIN_PRIVATE_KEY });
   const [processing, setProcessing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [addVoterForm, setAddVoterForm] = useState({ walletAddress: '', privateKey: '', loading: false });
   const [addCandidateForm, setAddCandidateForm] = useState({ walletAddress: '', privateKey: '', loading: false });
-  const [timingForm, setTimingForm] = useState({ startInMinutes: 10, durationMinutes: 60, privateKey: '', loading: false, title: '', description: '' });
+  const [timingForm, setTimingForm] = useState({ startInMinutes: 10, durationMinutes: 60, privateKey: DEFAULT_ADMIN_PRIVATE_KEY, loading: false, title: '', description: '' });
   const [statusChangeForm, setStatusChangeForm] = useState({ show: false, newStatus: '', loading: false });
 
   const fetchElections = async () => {
@@ -128,7 +130,7 @@ export const ElectionManagement = () => {
       });
       
       if (data.success) {
-        setEmergencyStopForm({ show: false, reason: '', privateKey: '' });
+        setEmergencyStopForm({ show: false, reason: '', privateKey: DEFAULT_ADMIN_PRIVATE_KEY });
         await loadElections();
         alert('Emergency stop activated successfully');
       }
@@ -150,7 +152,7 @@ export const ElectionManagement = () => {
       });
       
       if (data.success) {
-        setAnnounceResultsForm({ show: false, privateKey: '' });
+        setAnnounceResultsForm({ show: false, privateKey: DEFAULT_ADMIN_PRIVATE_KEY });
         await loadElections();
         alert('Results announced successfully');
       }
@@ -206,7 +208,7 @@ export const ElectionManagement = () => {
       const { data } = await api.put(`/election/${selectedElection.contractAddress}/timing`, payload);
       if (data.success) {
         alert('Registration opened and timing set successfully');
-        setTimingForm({ startInMinutes: 10, durationMinutes: 60, privateKey: '', loading: false, title: '', description: '' });
+        setTimingForm({ startInMinutes: 10, durationMinutes: 60, privateKey: DEFAULT_ADMIN_PRIVATE_KEY, loading: false, title: '', description: '' });
         await loadElections();
         if (selectedElection) await loadAnalytics(selectedElection.contractAddress);
       }
@@ -576,7 +578,7 @@ export const ElectionManagement = () => {
                             <button
                               onClick={() => {
                                 setSelectedElection(election);
-                                setEmergencyStopForm({ show: true, reason: '', privateKey: '' });
+                                setEmergencyStopForm({ show: true, reason: '', privateKey: DEFAULT_ADMIN_PRIVATE_KEY });
                               }}
                               className="group relative px-3 py-1 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-red-500/25 text-xs font-medium"
                             >
@@ -601,7 +603,7 @@ export const ElectionManagement = () => {
                             <button
                               onClick={() => {
                                 setSelectedElection(election);
-                                setAnnounceResultsForm({ show: true, privateKey: '' });
+                                setAnnounceResultsForm({ show: true, privateKey: DEFAULT_ADMIN_PRIVATE_KEY });
                               }}
                               className="group relative px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-green-500/25 text-xs font-medium"
                             >
@@ -1037,7 +1039,7 @@ export const ElectionManagement = () => {
                   <p className="text-slate-400 mt-1">Immediately halt election process</p>
                 </div>
                 <button
-                  onClick={() => setEmergencyStopForm({ show: false, reason: '', privateKey: '' })}
+                  onClick={() => setEmergencyStopForm({ show: false, reason: '', privateKey: DEFAULT_ADMIN_PRIVATE_KEY })}
                   className="group p-2 bg-slate-800/50 backdrop-blur-sm border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700/50 hover:scale-110 transition-all duration-300"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1118,7 +1120,7 @@ export const ElectionManagement = () => {
                     </span>
                   </button>
                   <button
-                    onClick={() => setEmergencyStopForm({ show: false, reason: '', privateKey: '' })}
+                    onClick={() => setEmergencyStopForm({ show: false, reason: '', privateKey: DEFAULT_ADMIN_PRIVATE_KEY })}
                     className="group relative px-6 py-3 bg-slate-800/50 backdrop-blur-sm border border-white/10 text-slate-300 rounded-xl hover:bg-slate-700/50 hover:text-white hover:scale-105 transition-all duration-300 font-medium"
                   >
                     <span className="relative flex items-center justify-center space-x-2">
@@ -1148,7 +1150,7 @@ export const ElectionManagement = () => {
                   <p className="text-slate-400 mt-1">Finalize and publish voting outcomes</p>
                 </div>
                 <button
-                  onClick={() => setAnnounceResultsForm({ show: false, privateKey: '' })}
+                  onClick={() => setAnnounceResultsForm({ show: false, privateKey: DEFAULT_ADMIN_PRIVATE_KEY })}
                   className="group p-2 bg-slate-800/50 backdrop-blur-sm border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700/50 hover:scale-110 transition-all duration-300"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1217,7 +1219,7 @@ export const ElectionManagement = () => {
                     </span>
                   </button>
                   <button
-                    onClick={() => setAnnounceResultsForm({ show: false, privateKey: '' })}
+                    onClick={() => setAnnounceResultsForm({ show: false, privateKey: DEFAULT_ADMIN_PRIVATE_KEY })}
                     className="group relative px-6 py-3 bg-slate-800/50 backdrop-blur-sm border border-white/10 text-slate-300 rounded-xl hover:bg-slate-700/50 hover:text-white hover:scale-105 transition-all duration-300 font-medium"
                   >
                     <span className="relative flex items-center justify-center space-x-2">
