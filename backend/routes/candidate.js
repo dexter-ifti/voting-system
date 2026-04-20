@@ -232,9 +232,10 @@ router.post('/register', [
 router.post('/register-election', [
     body('contractAddress').matches(/^0x[a-fA-F0-9]{40}$/).withMessage('Valid contract address required'),
     body('walletAddress').matches(/^0x[a-fA-F0-9]{40}$/).withMessage('Valid wallet address required'),
-    body('adminAddress').matches(/^0x[a-fA-F0-9]{40}$/).withMessage('Valid admin address required'),
-    body('signature').notEmpty().withMessage('Admin signature required for verification'),
-    body('message').notEmpty().withMessage('Signed message required for verification')
+    body('adminAddress').optional().matches(/^0x[a-fA-F0-9]{40}$/).withMessage('Valid admin address required'),
+    body('signature').optional().notEmpty().withMessage('Admin signature required for verification'),
+    body('message').optional().notEmpty().withMessage('Signed message required for verification'),
+    body('privateKey').optional().notEmpty().withMessage('Private key required for self verification')
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -246,34 +247,57 @@ router.post('/register-election', [
             });
         }
 
-        const { contractAddress, walletAddress, adminAddress, signature, message } = req.body;
+        const { contractAddress, walletAddress, adminAddress, signature, message, privateKey } = req.body;
 
-        // Verify admin signature from MetaMask
-        try {
-            const recoveredAddress = ethers.verifyMessage(message, signature);
-            if (recoveredAddress.toLowerCase() !== adminAddress.toLowerCase()) {
+        if (adminAddress && signature && message) {
+            // Verify admin signature from MetaMask
+            try {
+                const recoveredAddress = ethers.verifyMessage(message, signature);
+                if (recoveredAddress.toLowerCase() !== adminAddress.toLowerCase()) {
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Invalid admin signature'
+                    });
+                }
+            } catch (error) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Invalid admin signature'
+                    message: 'Invalid signature format',
+                    error: error.message
                 });
             }
-        } catch (error) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid signature format',
-                error: error.message
-            });
-        }
 
-        // Verify the admin address is authorized (check against Admin model or env)
-        const Admin = require('../models/Admin');
-        const admin = await Admin.findOne({ walletAddress: adminAddress });
+            // Verify the admin address is authorized (check against Admin model or env)
+            const Admin = require('../models/Admin');
+            const admin = await Admin.findOne({ walletAddress: adminAddress });
 
-        console.log('Admin performing registration:', adminAddress, 'Found admin:', !!admin);
-        if (!admin || admin.role !== 'super_admin') {
-            return res.status(403).json({
+            console.log('Admin performing registration:', adminAddress, 'Found admin:', !!admin);
+            if (!admin || admin.role !== 'super_admin') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Unauthorized: Not a valid admin address'
+                });
+            }
+        } else if (privateKey) {
+            // Verify private key corresponds to wallet address
+            try {
+                const wallet = new ethers.Wallet(privateKey);
+                if (wallet.address.toLowerCase() !== walletAddress.toLowerCase()) {
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Private key does not match wallet address'
+                    });
+                }
+            } catch (error) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid private key format'
+                });
+            }
+        } else {
+            return res.status(400).json({
                 success: false,
-                message: 'Unauthorized: Not a valid admin address'
+                message: 'Must provide either admin signature or private key'
             });
         }
 
@@ -327,10 +351,9 @@ router.post('/register-election', [
         let onChainId;
         
         try {
-            // Use admin private key from environment variables (more secure)
-            const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
-            if (!adminPrivateKey) {
-                throw new Error('Admin private key not configured in environment');
+            const pkToUse = privateKey || process.env.ADMIN_PRIVATE_KEY;
+            if (!pkToUse) {
+                throw new Error('Private key not provided and admin private key not configured in environment');
             }
 
             result = await blockchainService.registerCandidate(
@@ -340,7 +363,7 @@ router.post('/register-election', [
                 candidate.manifesto,
                 candidate.age,
                 ['NotSpecified', 'Male', 'Female', 'Other'].indexOf(candidate.gender),
-                adminPrivateKey
+                pkToUse
             );
             onChainId = result.candidateId;
         } catch (blockchainError) {
