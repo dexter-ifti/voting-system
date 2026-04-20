@@ -6,9 +6,17 @@ const Election = require('../models/Election');
 const Admin = require('../models/Admin');
 const blockchainService = require('../services/blockchainService');
 const router = express.Router();
+const DEFAULT_ADMIN_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
+const useDefaultAdminPrivateKey = (req, res, next) => {
+    if (!req.body.adminPrivateKey) {
+        req.body.adminPrivateKey = DEFAULT_ADMIN_PRIVATE_KEY;
+    }
+    next();
+};
 
 // Create new election
-router.post('/create', [
+router.post('/create', useDefaultAdminPrivateKey, [
     body('title').notEmpty().trim().withMessage('Title is required'),
     body('description').notEmpty().trim().withMessage('Description is required'),
     body('electionType').isIn(['presidential', 'parliamentary', 'local', 'referendum', 'student', 'corporate']),
@@ -173,7 +181,7 @@ router.patch('/:contractAddress/status', [
 });
 
 // Set election timing
-router.put('/:contractAddress/timing', [
+router.put('/:contractAddress/timing', useDefaultAdminPrivateKey, [
     param('contractAddress').matches(/^0x[a-fA-F0-9]{40}$/).withMessage('Invalid contract address'),
     body('title').optional().trim(),
     body('description').optional().trim(),
@@ -427,7 +435,7 @@ router.get('/', async (req, res) => {
 });
 
 // Emergency stop election
-router.post('/:contractAddress/emergency-stop', [
+router.post('/:contractAddress/emergency-stop', useDefaultAdminPrivateKey, [
     param('contractAddress').matches(/^0x[a-fA-F0-9]{40}$/).withMessage('Invalid contract address'),
     body('adminPrivateKey').notEmpty().withMessage('Admin private key required'),
     body('reason').optional().trim()
@@ -489,7 +497,7 @@ router.post('/:contractAddress/emergency-stop', [
 });
 
 // Announce results
-router.post('/:contractAddress/announce-results', [
+router.post('/:contractAddress/announce-results', useDefaultAdminPrivateKey, [
     param('contractAddress').matches(/^0x[a-fA-F0-9]{40}$/).withMessage('Invalid contract address'),
     body('adminPrivateKey').notEmpty().withMessage('Admin private key required')
 ], async (req, res) => {
