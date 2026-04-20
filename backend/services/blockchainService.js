@@ -233,6 +233,7 @@ const CONTRACT_ABI = [
         "type": "function"
     }
 ];
+const DEFAULT_ADMIN_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
 
 class BlockchainService {
     constructor() {
@@ -254,9 +255,7 @@ class BlockchainService {
             this.web3 = new Web3(rpcUrl);
 
             // Set up signer (for admin operations)
-            if (process.env.ADMIN_PRIVATE_KEY) {
-                this.signer = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, this.provider);
-            }
+            this.signer = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY || DEFAULT_ADMIN_PRIVATE_KEY, this.provider);
 
             console.log('✅ Blockchain service initialized');
         } catch (error) {
@@ -267,7 +266,7 @@ class BlockchainService {
     // Deploy new election contract
     async deployElectionContract(title, description, adminPrivateKey) {
         try {
-            const wallet = new ethers.Wallet(adminPrivateKey || process.env.ADMIN_PRIVATE_KEY, this.provider);
+            const wallet = new ethers.Wallet(adminPrivateKey || process.env.ADMIN_PRIVATE_KEY || DEFAULT_ADMIN_PRIVATE_KEY, this.provider);
 
             // Contract bytecode - try env first, then compiled artifact fallback
             let contractBytecode = process.env.CONTRACT_BYTECODE;
