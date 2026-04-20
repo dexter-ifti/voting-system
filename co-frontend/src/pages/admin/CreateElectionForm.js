@@ -1,12 +1,13 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState } from 'react';
 import { api } from '../../lib/api';
+const DEFAULT_ADMIN_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
 export const CreateElectionForm = ({ onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
         electionType: 'presidential',
-        adminPrivateKey: '',
+        adminPrivateKey: DEFAULT_ADMIN_PRIVATE_KEY,
         registrationStartTime: '',
         registrationEndTime: '',
         votingStartTime: '',
