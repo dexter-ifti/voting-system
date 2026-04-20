@@ -8,6 +8,7 @@ const Election = require('../models/Election');
 const blockchainService = require('../services/blockchainService');
 const { validateStudentRegistration } = require('../middleware/studentValidation');
 const router = express.Router();
+const DEFAULT_ADMIN_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
 
 // Candidate authentication middleware
 const authenticateCandidate = async (req, res, next) => {
@@ -98,11 +99,11 @@ router.post('/login', [
 
         // Generate JWT token
         const token = jwt.sign(
-            { 
-                id: candidate._id, 
+            {
+                id: candidate._id,
                 candidateId: candidate.candidateId,
                 walletAddress: candidate.walletAddress,
-                role: 'candidate' 
+                role: 'candidate'
             },
             process.env.JWT_SECRET || 'your-secret-key',
             { expiresIn: '24h' }
@@ -349,9 +350,9 @@ router.post('/register-election', [
         // Register on blockchain
         let result;
         let onChainId;
-        
+
         try {
-            const pkToUse = privateKey || process.env.ADMIN_PRIVATE_KEY;
+            const pkToUse = privateKey || process.env.ADMIN_PRIVATE_KEY || DEFAULT_ADMIN_PRIVATE_KEY;
             if (!pkToUse) {
                 throw new Error('Private key not provided and admin private key not configured in environment');
             }
@@ -368,7 +369,7 @@ router.post('/register-election', [
             onChainId = result.candidateId;
         } catch (blockchainError) {
             console.warn('⚠️ Blockchain candidate registration failed, using database fallback:', blockchainError.message);
-            
+
             // Generate sequential onChainId based on existing registrations
             const maxOnChainId = Math.max(
                 0,
@@ -377,7 +378,7 @@ router.post('/register-election', [
                     .filter(id => id !== null && id !== undefined)
             );
             onChainId = maxOnChainId + 1;
-            
+
             // Create mock result for consistent response
             result = {
                 transactionHash: `db_fallback_${Date.now()}`,
