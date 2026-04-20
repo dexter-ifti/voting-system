@@ -4,11 +4,13 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 
+const DEFAULT_ADMIN_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
 export const CreateElectionPage = () => {
   const user = useAuthStore(s => s.user);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ title:'', description:'', electionType:'presidential', adminPrivateKey:'' });
+  const [form, setForm] = useState({ title:'', description:'', electionType:'presidential', adminPrivateKey: DEFAULT_ADMIN_PRIVATE_KEY });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +54,7 @@ export const CreateElectionPage = () => {
         </div>
         <div>
           <label className="block text-xs mb-1">Admin Private Key (deployment)</label>
-          <input value={form.adminPrivateKey} onChange={e=>setForm(f=>({...f,adminPrivateKey:e.target.value}))} required className="w-full" />
+          <input type="password" value={form.adminPrivateKey} onChange={e=>setForm(f=>({...f,adminPrivateKey:e.target.value}))} required className="w-full" />
         </div>
         <button disabled={loading} className="w-full bg-primary/80 hover:bg-primary py-2 rounded font-medium text-sm disabled:opacity-50">{loading? 'Deploying...':'Create & Deploy'}</button>
       </form>
